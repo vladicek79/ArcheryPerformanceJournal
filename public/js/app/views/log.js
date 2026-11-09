@@ -262,16 +262,11 @@ function renderActive(ctx, session) {
     );
   });
 
-  const pills = h(
-    'div',
-    { class: 'pills' },
-    h('span', { class: 'pill' }, `${session.distance} m`),
-    h('span', { class: 'pill' }, `${faceLabel(session.face)} face`),
-    h('span', { class: 'pill' }, `${n} arrows/end`),
+  // Distance, face and arrows/end are already in the header subtitle; only the sight mark is shown here.
+  const pills =
     sight && (sight.elevation || sight.windage)
-      ? h('span', { class: 'pill pill-accent' }, `Sight ${[sight.elevation, sight.windage].filter(Boolean).join(' / ')}`)
-      : null,
-  );
+      ? h('div', { class: 'pills' }, h('span', { class: 'pill pill-accent' }, `Sight ${[sight.elevation, sight.windage].filter(Boolean).join(' / ')}`))
+      : null;
 
   return {
     content: h(
