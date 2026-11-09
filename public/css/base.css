@@ -1819,3 +1819,44 @@ button.saved-end {
 .mini-grade.empty {
   visibility: hidden;
 }
+
+/* ---------------------------------------------------------------- all cards edge to edge */
+.main .card {
+  margin-left: -16px;
+  margin-right: -16px;
+  max-width: none;
+  border-radius: 0;
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+.main .card.card-flush {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.main .card-flush .pad-x {
+  padding: 0 16px;
+}
+
+@media (min-width: 600px) {
+  .main .card {
+    margin-left: -24px;
+    margin-right: -24px;
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+  .main .card.card-flush {
+    padding-left: 0;
+    padding-right: 0;
+  }
+  .main .card-flush .pad-x {
+    padding: 0 24px;
+  }
+}
+
+/* scoring card keeps its tighter side padding (more room for the target) */
+.main .card.card-bleed {
+  padding-left: 12px;
+  padding-right: 12px;
+}
