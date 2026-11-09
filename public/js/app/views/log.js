@@ -179,12 +179,9 @@ function renderActive(ctx, session) {
 
   const input = targetInput(session, enter, slots);
 
-  // Edit mode (an existing arrow tapped): the next target touch / key replaces it; Delete / Done in the grades header.
-  const grades = gradePanel(session, {
-    onGrade: (kind, g) => update(ctx, (c) => L.gradeArrow(c, kind, g)),
-    onDelete: () => update(ctx, L.clearArrow),
-    onDone: () => update(ctx, L.doneEditing),
-  });
+  // Tapping an arrow on the left selects it: the next target touch / key replaces it, grades below apply to it;
+  // tapping it again deselects it.
+  const grades = gradePanel(session, { onGrade: (kind, g) => update(ctx, (c) => L.gradeArrow(c, kind, g)) });
 
   const endCard = card(
     { class: 'card-bleed', 'aria-label': `End ${endNo}` },
@@ -517,10 +514,8 @@ const round3 = (n) => Math.round(n * 1000) / 1000;
 // ---------------------------------------------------------------- inline grades
 
 /** Two compact rows (M and S, grades 1–5) for the selected arrow, styled like the score keys. */
-function gradePanel(session, { onGrade, onDelete, onDone }) {
-  const editing = L.isEditing(session);
+function gradePanel(session, { onGrade }) {
   const a = L.shownEnd(session).arrows[session.cursor];
-  const scored = a.v != null;
   const row = (kind, label, full) =>
     h(
       'div',
@@ -544,22 +539,6 @@ function gradePanel(session, { onGrade, onDelete, onDone }) {
   return h(
     'div',
     { class: 'grade-panel' },
-    h(
-      'div',
-      { class: ['grade-panel-head small', editing ? 'is-editing' : 'muted'], role: editing ? 'status' : null },
-      h('span', { class: `score-chip score-chip-sm z-${zoneOf(a.v)}` }, scored ? String(a.v) : String(session.cursor + 1)),
-      h(
-        'span',
-        { class: 'grow' },
-        editing
-          ? [h('strong', null, T.editingArrow(session.cursor + 1)), h('span', { class: 'sr-only' }, ` ${T.editHint}`)]
-          : scored
-            ? T.gradeArrow(session.cursor + 1)
-            : T.gradeUnscored(session.cursor + 1),
-      ),
-      editing ? h('button', { type: 'button', class: 'btn btn-outline-thin btn-sm danger-text', onClick: onDelete }, T.delete) : null,
-      editing ? h('button', { type: 'button', class: 'btn btn-outline-thin btn-sm', onClick: onDone }, T.done) : null,
-    ),
     row('m', 'M', T.mentalProgram),
     row('s', 'S', T.shootingCycle),
   );
