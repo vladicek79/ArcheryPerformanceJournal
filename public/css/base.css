@@ -1893,3 +1893,9 @@ button.saved-end {
 .aim-row .target-stage {
   width: min(100%, 560px, max(230px, calc(100dvh - 470px)));
 }
+
+/* no selection square around arrows in the left column */
+.slot.is-active,
+.slot.is-moving {
+  box-shadow: none;
+}
