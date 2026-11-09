@@ -1728,3 +1728,26 @@ button.saved-end {
   width: 34px;
   height: 34px;
 }
+
+/* selected arrow in the left column: evenly padded square around chip + grades, no dashed ring */
+.aim-row .slot {
+  width: 100%;
+  padding: 5px 0 4px;
+  border-radius: 12px;
+  align-items: center;
+  justify-content: center;
+}
+
+.slot.is-moving .score-chip {
+  outline: none;
+}
+
+.aim-row .slot {
+  padding: 4px 0 3px;
+}
+
+.aim-row .slot .score-chip {
+  width: 32px;
+  height: 32px;
+  font-size: 14px;
+}
