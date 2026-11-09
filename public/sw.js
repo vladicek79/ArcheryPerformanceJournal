@@ -30,7 +30,6 @@ const SHELL = [
   './js/app/strings.js',
   './js/app/views/common.js',
   './js/app/views/log.js',
-  './js/app/views/dashboard.js',
   './js/app/views/history.js',
   './js/app/views/gear.js',
   './js/app/views/sights.js',

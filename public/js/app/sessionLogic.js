@@ -52,10 +52,12 @@ export function enterScore(session, v, x = null, y = null) {
   return s;
 }
 
-/** Set the M or S grade of the selected arrow. Tapping the current grade again clears it. */
+/**
+ * Set the M or S grade of the selected arrow — also before it has a score (grade the shot first,
+ * score it after). Tapping the current grade again clears it.
+ */
 export function gradeArrow(session, kind, g) {
-  const a = session.current.arrows[session.cursor];
-  if (!a || a.v == null) return session;
+  if (!session.current.arrows[session.cursor]) return session;
   const s = clone(session);
   const t = s.current.arrows[s.cursor];
   t[kind] = t[kind] === g ? null : g;

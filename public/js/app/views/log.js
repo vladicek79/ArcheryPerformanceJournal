@@ -30,6 +30,11 @@ export function renderLog(ctx) {
   return active ? renderActive(ctx, active) : renderSetup(ctx);
 }
 
+/** New-session setup, reachable from the bottom bar even while a session is in progress. */
+export function renderNewSession(ctx) {
+  return renderSetup(ctx, findActive(ctx.repo));
+}
+
 /** Apply a session transition to the stored active session and persist it. */
 function update(ctx, fn, { rerender = true } = {}) {
   const cur = findActive(ctx.repo);
@@ -41,12 +46,21 @@ function update(ctx, fn, { rerender = true } = {}) {
 
 // ---------------------------------------------------------------- new session
 
-function renderSetup(ctx) {
+function renderSetup(ctx, active = null) {
   const settings = ctx.repo.getSettings();
   const setup = ctx.ui.get().setup || settings.lastSetup;
   const set = (patch) => ctx.ui.set({ setup: { ...setup, ...patch } });
 
   const start = () => {
+    // Only one session runs at a time: an in-progress session is finished (saved ends kept) or,
+    // if it has no saved ends, discarded.
+    const running = findActive(ctx.repo);
+    if (running) {
+      if (!confirm(L.canFinish(running) ? T.confirmReplaceFinish : T.confirmReplaceDiscard)) return;
+      if (L.canFinish(running)) {
+        if (!ctx.save('sessions', L.finishSession(running))) return;
+      } else if (!ctx.remove('sessions', running.id)) return;
+    }
     ctx.repo.saveSettings({ lastSetup: setup });
     const session = L.createSession({
       date: todayIso(),
@@ -55,7 +69,7 @@ function renderSetup(ctx) {
       gearSnapshotId: settings.activeSnapshotId,
     });
     ctx.ui.quietSet({ setup: null });
-    if (ctx.save('sessions', session)) ctx.rerender();
+    if (ctx.save('sessions', session)) ctx.navigate('log');
   };
 
   const today = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -65,6 +79,14 @@ function renderSetup(ctx) {
       'div',
       { class: 'stack' },
       h('div', null, h('h1', { class: 'page-title' }, T.newSession), h('div', { class: 'muted small' }, `${today} · ${T.training}`)),
+      active
+        ? h(
+            'div',
+            { class: 'banner', role: 'status' },
+            h('span', null, T.inProgress(`${active.distance} m · ${faceLabel(active.face)}`, active.ends.length)),
+            h('a', { class: 'btn btn-primary btn-sm', href: '#/log' }, T.continueSession),
+          )
+        : null,
       card(
         { 'aria-labelledby': 'lbl-dist' },
         sectionLabel(T.distance, 'lbl-dist'),
@@ -453,7 +475,7 @@ const round3 = (n) => Math.round(n * 1000) / 1000;
 function gradePanel(session, { onGrade, onDelete, onDone }) {
   const editing = L.isEditing(session);
   const a = session.current.arrows[session.cursor];
-  const enabled = a && a.v != null;
+  const scored = a.v != null;
   const row = (kind, label, full) =>
     h(
       'div',
@@ -465,9 +487,8 @@ function gradePanel(session, { onGrade, onDelete, onDone }) {
           {
             type: 'button',
             class: `grade-key g${g}`,
-            'aria-pressed': String(enabled && a[kind] === g),
+            'aria-pressed': String(a[kind] === g),
             'aria-label': `${full} ${g}`,
-            disabled: !enabled,
             dataset: { fk: `grade-${kind}-${g}` },
             onClick: () => onGrade(kind, g),
           },
@@ -477,18 +498,22 @@ function gradePanel(session, { onGrade, onDelete, onDone }) {
     );
   return h(
     'div',
-    { class: ['grade-panel', enabled && (a.m != null || a.s != null) && 'has-grade'] },
+    { class: 'grade-panel' },
     h(
       'div',
       { class: ['grade-panel-head small', editing ? 'is-editing' : 'muted'], role: editing ? 'status' : null },
-      enabled
-        ? [
-            h('span', { class: `score-chip score-chip-sm z-${zoneOf(a.v)}` }, String(a.v)),
-            h('span', { class: 'grow' }, editing ? [h('strong', null, T.editingArrow(session.cursor + 1)), h('span', { class: 'sr-only' }, ` ${T.editHint}`)] : T.gradeArrow(session.cursor + 1)),
-            editing ? h('button', { type: 'button', class: 'btn btn-outline-thin btn-sm danger-text', onClick: onDelete }, T.delete) : null,
-            editing ? h('button', { type: 'button', class: 'btn btn-outline-thin btn-sm', onClick: onDone }, T.done) : null,
-          ]
-        : T.placeFirst(session.cursor + 1),
+      h('span', { class: `score-chip score-chip-sm z-${zoneOf(a.v)}` }, scored ? String(a.v) : String(session.cursor + 1)),
+      h(
+        'span',
+        { class: 'grow' },
+        editing
+          ? [h('strong', null, T.editingArrow(session.cursor + 1)), h('span', { class: 'sr-only' }, ` ${T.editHint}`)]
+          : scored
+            ? T.gradeArrow(session.cursor + 1)
+            : T.gradeUnscored(session.cursor + 1),
+      ),
+      editing ? h('button', { type: 'button', class: 'btn btn-outline-thin btn-sm danger-text', onClick: onDelete }, T.delete) : null,
+      editing ? h('button', { type: 'button', class: 'btn btn-outline-thin btn-sm', onClick: onDone }, T.done) : null,
     ),
     row('m', 'M', T.mentalProgram),
     row('s', 'S', T.shootingCycle),

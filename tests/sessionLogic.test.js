@@ -32,9 +32,15 @@ describe('scoring and inline grading', () => {
     expect(s.current.arrows[0].m).toBeNull();
   });
 
-  it('cannot grade an empty slot', () => {
-    const s0 = start();
-    expect(L.gradeArrow(s0, 'm', 1)).toBe(s0);
+  it('an arrow can be graded before it is scored; the score keeps the grades', () => {
+    let s = L.selectArrow(L.enterScore(start(), 10), 2);
+    s = L.gradeArrow(L.gradeArrow(s, 'm', 1), 's', 2);
+    expect(s.current.arrows[2]).toMatchObject({ v: null, m: 1, s: 2 });
+    expect(L.canSaveEnd(s)).toBe(false);
+    s = L.enterScore(s, 9);
+    expect(s.current.arrows[2]).toMatchObject({ v: 9, m: 1, s: 2 });
+    s = L.enterScore(s, 8);
+    expect(s.current.arrows.map((a) => a.v)).toEqual([10, 8, 9]);
   });
 
   it('ignores scores when the end is full', () => {
