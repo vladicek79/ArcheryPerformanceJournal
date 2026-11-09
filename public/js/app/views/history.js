@@ -178,7 +178,8 @@ function reviewCard(ctx, ss) {
       { class: 'field' },
       h('span', { class: 'field-label' }, label),
       h('textarea', {
-        rows: 3,
+        rows: 6,
+        class: 'review-text',
         placeholder,
         value: ss.review?.[key] || '',
         dataset: { fk: `review-${key}` },

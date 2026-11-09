@@ -1983,3 +1983,39 @@ button.saved-end {
 .env-test .tabbar {
   border-top: 3px solid #b45309;
 }
+
+/* Performance review: tall enough for a few sentences, and grows with the text where supported */
+.review-text {
+  min-height: 9rem;
+  field-sizing: content;
+}
+
+/* New-session setup: one compact card that fits a phone screen */
+.setup-card {
+  gap: 14px;
+}
+
+.setup-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.setup-card .chip {
+  min-height: 44px;
+  flex-direction: row;
+  gap: 6px;
+  font-size: 16px;
+}
+
+.setup-card .grid-3 .chip {
+  font-size: 15px;
+}
+
+.setup-card .chip-main {
+  font-size: 16px;
+}
+
+.setup-card .chip-sub {
+  font-size: 13px;
+}

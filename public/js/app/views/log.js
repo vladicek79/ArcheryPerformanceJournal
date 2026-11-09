@@ -72,13 +72,10 @@ function renderSetup(ctx, active = null) {
     if (ctx.save('sessions', session)) ctx.navigate('log');
   };
 
-  const today = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
-
   return {
     content: h(
       'div',
       { class: 'stack' },
-      h('div', null, h('h1', { class: 'page-title' }, T.newSession), h('div', { class: 'muted small' }, `${today} · ${T.training}`)),
       active
         ? h(
             'div',
@@ -87,44 +84,50 @@ function renderSetup(ctx, active = null) {
             h('a', { class: 'btn btn-primary btn-sm', href: '#/log' }, T.continueSession),
           )
         : null,
+      // One compact card so the whole setup fits on a phone screen without scrolling.
       card(
-        { 'aria-labelledby': 'lbl-dist' },
-        sectionLabel(T.distance, 'lbl-dist'),
+        { class: 'setup-card' },
         h(
-          'div',
-          { class: 'grid-4' },
-          DISTANCES.map((d) =>
-            chip({ label: `${d} m`, pressed: setup.distance === d, fk: `dist-${d}`, onClick: () => set({ distance: d, ...DISTANCE_DEFAULTS[d] }) }),
+          'section',
+          { class: 'setup-section', 'aria-labelledby': 'lbl-dist' },
+          sectionLabel(T.distance, 'lbl-dist'),
+          h(
+            'div',
+            { class: 'grid-4' },
+            DISTANCES.map((d) =>
+              chip({ label: `${d} m`, pressed: setup.distance === d, fk: `dist-${d}`, onClick: () => set({ distance: d, ...DISTANCE_DEFAULTS[d] }) }),
+            ),
+          ),
+        ),
+        h(
+          'section',
+          { class: 'setup-section', 'aria-labelledby': 'lbl-face' },
+          sectionLabel(T.targetFace, 'lbl-face'),
+          h(
+            'div',
+            { class: 'grid-3' },
+            FACE_IDS.map((f) => chip({ label: faceLabel(f), pressed: setup.face === f, fk: `face-${f}`, onClick: () => set({ face: f }) })),
+          ),
+        ),
+        h(
+          'section',
+          { class: 'setup-section', 'aria-labelledby': 'lbl-n' },
+          sectionLabel(T.arrowsPerEnd, 'lbl-n'),
+          h(
+            'div',
+            { class: 'grid-2' },
+            ARROWS_PER_END.map((n) =>
+              chip({
+                label: `${n} arrows`,
+                sub: n === 3 ? T.indoorStyle : T.outdoorStyle,
+                pressed: setup.arrowsPerEnd === n,
+                fk: `n-${n}`,
+                onClick: () => set({ arrowsPerEnd: n }),
+              }),
+            ),
           ),
         ),
       ),
-      card(
-        { 'aria-labelledby': 'lbl-face' },
-        sectionLabel(T.targetFace, 'lbl-face'),
-        h(
-          'div',
-          { class: 'grid-3' },
-          FACE_IDS.map((f) => chip({ label: faceLabel(f), pressed: setup.face === f, fk: `face-${f}`, onClick: () => set({ face: f }) })),
-        ),
-      ),
-      card(
-        { 'aria-labelledby': 'lbl-n' },
-        sectionLabel(T.arrowsPerEnd, 'lbl-n'),
-        h(
-          'div',
-          { class: 'grid-2' },
-          ARROWS_PER_END.map((n) =>
-            chip({
-              label: `${n} arrows`,
-              sub: n === 3 ? T.indoorStyle : T.outdoorStyle,
-              pressed: setup.arrowsPerEnd === n,
-              fk: `n-${n}`,
-              onClick: () => set({ arrowsPerEnd: n }),
-            }),
-          ),
-        ),
-      ),
-      h('p', { class: 'muted small center' }, T.smartDefaults),
       h('button', { type: 'button', class: 'btn btn-primary btn-xl', onClick: start }, T.start(setup.distance, faceLabel(setup.face))),
     ),
   };
