@@ -160,7 +160,13 @@ function renderActive(ctx, session) {
           onClick: () => update(ctx, (cur) => L.selectArrow(cur, i)),
         },
         h('span', { class: `score-chip z-${zoneOf(a.v)}` }, a.v == null ? String(i + 1) : String(a.v)),
-        h('span', { class: 'slot-grades' }, `M${a.m ?? '–'} S${a.s ?? '–'}`),
+        // M and S as small badges in the grade colours — as visible as the score
+        h(
+          'span',
+          { class: 'slot-grades', 'aria-hidden': 'true' },
+          h('span', { class: `mini-grade ${a.m ? `g${a.m}` : 'empty'}` }, `M${a.m ?? '–'}`),
+          h('span', { class: `mini-grade ${a.s ? `g${a.s}` : 'empty'}` }, `S${a.s ?? '–'}`),
+        ),
       );
     }),
   );
