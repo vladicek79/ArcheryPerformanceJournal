@@ -37,6 +37,9 @@ export function createRepository({
   collections,
   defaultSettings = {},
   migrations,
+  syncedSettingKeys = [],
+  // deletion markers are only needed when sync is on; otherwise remove() drops the record outright
+  keepDeletionMarkers = () => true,
   now = () => new Date(),
   uuid = () => crypto.randomUUID(),
 }) {
@@ -52,14 +55,14 @@ export function createRepository({
       app: appId,
       schemaVersion,
       updatedAt: t,
-      meta: { lastBackupAt: null, createdAt: t },
+      meta: { lastBackupAt: null, lastSyncAt: null, settingsUpdatedAt: null, createdAt: t },
       settings: structuredClone(defaultSettings),
       collections: cols,
     };
   }
 
   function normalise(d) {
-    d.meta = { lastBackupAt: null, createdAt: d.updatedAt || iso(), ...(d.meta || {}) };
+    d.meta = { lastBackupAt: null, lastSyncAt: null, settingsUpdatedAt: null, createdAt: d.updatedAt || iso(), ...(d.meta || {}) };
     d.settings = { ...structuredClone(defaultSettings), ...(d.settings || {}) };
     d.collections = d.collections || {};
     for (const name of Object.keys(collections)) {
@@ -137,7 +140,8 @@ export function createRepository({
     list(name, { filter, sort } = {}) {
       assertReady();
       def(name);
-      let items = doc.collections[name].map((r) => structuredClone(r));
+      // deletion markers ({ deleted: true }) are kept for sync but never shown
+      let items = doc.collections[name].filter((r) => !r.deleted).map((r) => structuredClone(r));
       if (filter) items = items.filter(filter);
       if (sort) items.sort(sort);
       return items;
@@ -147,7 +151,7 @@ export function createRepository({
       assertReady();
       def(name);
       const r = doc.collections[name].find((x) => x.id === id);
-      return r ? structuredClone(r) : null;
+      return r && !r.deleted ? structuredClone(r) : null;
     },
 
     /** Create (no id or unknown id) or update. Returns the saved record. */
@@ -156,9 +160,11 @@ export function createRepository({
       const c = def(name);
       const t = iso();
       const existing = record.id ? doc.collections[name].find((x) => x.id === record.id) : null;
+      // saving a record (also over a deletion marker) makes it live again
+      const { deleted: _d, deletedAt: _da, ...fields } = structuredClone(record);
       const saved = {
         ...(c.defaults ? c.defaults() : {}),
-        ...structuredClone(record),
+        ...fields,
         id: record.id || uuid(),
         createdAt: existing?.createdAt || record.createdAt || t,
         updatedAt: t,
@@ -176,11 +182,15 @@ export function createRepository({
       return structuredClone(saved);
     },
 
+    /** Delete a record. It is replaced by a deletion marker so the deletion can sync to other devices. */
     remove(name, id) {
       def(name);
+      const t = iso();
       commit(
         (d) => {
-          d.collections[name] = d.collections[name].filter((x) => x.id !== id);
+          d.collections[name] = keepDeletionMarkers()
+            ? d.collections[name].map((r) => (r.id === id ? { id, createdAt: r.createdAt, updatedAt: t, deletedAt: t, deleted: true } : r))
+            : d.collections[name].filter((r) => r.id !== id);
         },
         { type: 'remove', collection: name, id },
       );
@@ -195,6 +205,7 @@ export function createRepository({
       commit(
         (d) => {
           d.settings = { ...d.settings, ...structuredClone(patch) };
+          if (Object.keys(patch).some((k) => syncedSettingKeys.includes(k))) d.meta.settingsUpdatedAt = iso();
         },
         { type: 'settings' },
       );
@@ -204,6 +215,31 @@ export function createRepository({
     getMeta() {
       assertReady();
       return structuredClone(doc.meta);
+    },
+
+    /** Patch device meta (e.g. lastSyncAt). */
+    setMeta(patch) {
+      commit(
+        (d) => {
+          d.meta = { ...d.meta, ...patch };
+        },
+        { type: 'meta' },
+      );
+    },
+
+    /**
+     * Replace the synced part of the document (collections, synced settings and their timestamp)
+     * with the result of a sync merge, in one write. Device-only settings are kept.
+     */
+    applySyncedData({ collections: cols, settings, settingsUpdatedAt }) {
+      commit(
+        (d) => {
+          for (const name of Object.keys(collections)) d.collections[name] = structuredClone(cols[name] || []);
+          for (const k of syncedSettingKeys) if (settings && k in settings) d.settings[k] = structuredClone(settings[k]);
+          d.meta.settingsUpdatedAt = settingsUpdatedAt ?? d.meta.settingsUpdatedAt ?? null;
+        },
+        { type: 'sync' },
+      );
     },
 
     markBackup() {
@@ -232,9 +268,10 @@ export function createRepository({
       let newest = null;
       for (const name of Object.keys(collections)) {
         const list = migrated.collections[name];
-        counts[name] = list.length;
+        counts[name] = list.filter((r) => !r?.deleted).length;
         list.forEach((r, i) => {
           if (!r || typeof r.id !== 'string') throw new ImportError(`${name} #${i + 1} has no id.`);
+          if (r.deleted) return;
           const errs = def(name).validate ? def(name).validate(r) : [];
           if (errs.length) throw new ImportError(`${name} #${i + 1}: ${errs.join('; ')}`);
           if (r.updatedAt && (!newest || r.updatedAt > newest)) newest = r.updatedAt;

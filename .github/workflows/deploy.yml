@@ -1,10 +1,14 @@
 name: Deploy
 
+# One GitHub Pages site serves two environments:
+#   main       → https://<user>.github.io/<repo>/        (production)
+#   main-test  → https://<user>.github.io/<repo>/test/   (test)
+# Pages publishes one artifact per site, so every run rebuilds both from their branch tips.
 on:
   workflow_run:
     workflows: [CI]
     types: [completed]
-    branches: [main]
+    branches: [main, main-test]
   workflow_dispatch:
 
 permissions:
@@ -26,16 +30,51 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out main (production)
+        uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
-      - name: Stamp version
+          ref: main
+          path: prod
+
+      - name: Check whether main-test exists
+        id: testbranch
         run: |
-          VERSION=$(git rev-parse --short HEAD)
-          sed -i "s/__APP_VERSION__/${VERSION}/g" public/sw.js public/js/config.js
+          if git ls-remote --exit-code --heads "https://github.com/${{ github.repository }}.git" main-test >/dev/null; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check out main-test (test)
+        if: steps.testbranch.outputs.exists == 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: main-test
+          path: testsrc
+
+      - name: Assemble site
+        run: |
+          stamp() { # $1 = source dir, $2 = env
+            local version
+            version=$(git -C "$1" rev-parse --short HEAD)
+            sed -i "s/__APP_VERSION__/${version}/g; s/__APP_ENV__/$2/g" "$1/public/sw.js" "$1/public/js/config.js"
+          }
+          stamp prod prod
+          mkdir -p site
+          cp -r prod/public/. site/
+          if [ -d testsrc ]; then
+            stamp testsrc test
+            # the test app installs as its own PWA with a distinct name
+            sed -i 's/"name": "Archery Performance Journal"/"name": "Archery Journal TEST"/; s/"short_name": "Archery Journal"/"short_name": "Journal TEST"/' testsrc/public/manifest.webmanifest
+            mkdir -p site/test
+            cp -r testsrc/public/. site/test/
+          fi
+          echo "Production: $(sed -n 2p site/sw.js)"
+          [ -f site/test/sw.js ] && echo "Test: $(sed -n 2p site/test/sw.js)" || echo "Test: (no main-test branch)"
+
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: public
+          path: site
       - id: deployment
         uses: actions/deploy-pages@v4

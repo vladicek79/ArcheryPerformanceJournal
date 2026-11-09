@@ -32,3 +32,14 @@ describe('migrations', () => {
     expect(() => migrate({ schemaVersion: 4 }, 3, steps)).toThrow(/newer/);
   });
 });
+
+describe('schema v2 (Drive sync)', () => {
+  it('v1 documents gain meta.settingsUpdatedAt and keep their data', async () => {
+    const { migrations: real } = await import('../public/js/storage/migrations.js');
+    const v1 = { app: 'archery-performance-journal', schemaVersion: 1, meta: { lastBackupAt: null }, settings: {}, collections: { sessions: [{ id: 'a' }] } };
+    const out = migrate(v1, 2, real);
+    expect(out.schemaVersion).toBe(2);
+    expect(out.meta).toEqual({ lastBackupAt: null, settingsUpdatedAt: null });
+    expect(out.collections.sessions).toEqual([{ id: 'a' }]);
+  });
+});

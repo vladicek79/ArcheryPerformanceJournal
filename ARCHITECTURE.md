@@ -153,10 +153,13 @@ Triggers: `push` and `pull_request`.
 4. `npm test`
 
 ### 5.4 Deploy (`.github/workflows/deploy.yml`)
-Trigger: `push` to `main` (after CI passes) and manual `workflow_dispatch`.
-1. Stamp the version: replace `__APP_VERSION__` in `sw.js` and `config.js` with the short commit SHA, so every deploy gets a fresh service-worker cache.
-2. Upload `public/` with `actions/upload-pages-artifact`.
-3. Publish with `actions/deploy-pages`.
+Trigger: CI passing on `main` or `main-test`, and manual `workflow_dispatch`. Deployments queue (never cancel a running one).
+1. Check out `main` (production) and, if it exists, `main-test` (test).
+2. Stamp each: replace `__APP_VERSION__` (short commit SHA) and `__APP_ENV__` (`prod` / `test`) in `sw.js` and `config.js`.
+3. Assemble the site: production at the root, test under `/test/` (its manifest renamed *Archery Journal TEST*).
+4. Upload with `actions/upload-pages-artifact` and publish with `actions/deploy-pages`.
+
+**Environments:** production `https://<user>.github.io/<repo>/` from `main`; test `https://<user>.github.io/<repo>/test/` from `main-test`. Both share the browser origin, so the test build uses its own storage key (`apj-test.v1`), its own cache prefix and its own Drive file, and shows a **TEST** badge.
 
 Settings: **Repository → Settings → Pages → Source: GitHub Actions**.
 
@@ -294,8 +297,8 @@ Backup files contain personal data in plain JSON. Keep them in private storage, 
 
 | Aspect | Approach |
 |---|---|
-| **Privacy** | No analytics, no third-party scripts, no fonts or CDNs at runtime, no outbound requests |
-| **Security** | CSP meta tag: `default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:`. User text rendered with `textContent`, never `innerHTML`. Imported data validated before use. |
+| **Privacy** | No analytics, no third-party scripts, no fonts or CDNs at runtime. The only outbound requests are the optional sync to the user's own Google Drive (D7): sign-in by redirect to Google and calls to `www.googleapis.com` |
+| **Security** | CSP meta tag: `default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; connect-src 'self' https://www.googleapis.com`. User text rendered with `textContent`, never `innerHTML`. Imported data validated before use. |
 | **Performance** | Shipped size < 150 KB; start from cache < 1 s on a mid-range phone |
 | **Reliability** | Single-document atomic writes, validation on save and import, rollback copies before migrations and imports |
 | **Accessibility** | Semantic HTML, labelled controls, tap targets ≥ 48 px, light and dark themes |
@@ -337,3 +340,5 @@ Backup files contain personal data in plain JSON. Keep them in private storage, 
 | D4 | Manual JSON backup via share sheet | Cloud sync, backend | Meets the "no external API" constraint; user owns the file |
 | D5 | GitHub Pages deployed by GitHub Actions | Netlify, Cloudflare Pages, branch-based Pages | Free HTTPS, version stamping and tests before deploy |
 | D6 | No build step by default | Vite from day one | Less tooling for the pilot; Vite can be added without touching the platform modules |
+| D7 | Optional sync to the user's own Google Drive (`appDataFolder`), OAuth implicit flow by redirect, no Google script; per-record last-write-wins merge with deletion markers; only the gear setup syncs among settings | Firebase/Supabase, server, Google Identity Services script | Multi-device use without a backend; data stays in the user's Drive; CSP keeps `script-src 'self'`. Spec: `specs/google-drive-sync/spec.md` |
+| D8 | Test environment from branch `main-test`, published under `/test/` of the same Pages site | Separate repository / Pages site | One Pages site per repo; same origin, so test uses its own storage key, cache prefix and Drive file |

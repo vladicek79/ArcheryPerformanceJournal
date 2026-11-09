@@ -1,6 +1,17 @@
 // Ordered schema upgrade steps: { from, to, up(doc) → doc }.
 // Add a step here and bump SCHEMA_VERSION in config.js when the document shape changes.
-export const migrations = [];
+export const migrations = [
+  {
+    // v2: Google Drive sync. Adds the timestamp used to merge the synced settings
+    // (gear setup) between devices. Deleted records may now be kept as markers
+    // ({ id, deleted: true, deletedAt, updatedAt }); existing records are unchanged.
+    from: 1,
+    to: 2,
+    up(doc) {
+      return { ...doc, meta: { ...(doc.meta || {}), settingsUpdatedAt: doc.meta?.settingsUpdatedAt ?? null } };
+    },
+  },
+];
 
 export class NewerVersionError extends Error {
   constructor(found, supported) {
