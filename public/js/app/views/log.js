@@ -264,7 +264,6 @@ function renderActive(ctx, session) {
       { class: 'stack' },
       pills,
       endCard,
-      h('p', { class: 'muted small center tight' }, T.hint),
       details,
       rows.length ? card({ class: 'card-list', 'aria-label': 'Saved ends' }, h('ol', { class: 'saved-ends', reversed: true }, rows.reverse())) : null,
       h('button', { type: 'button', class: 'btn btn-text danger', onClick: discard }, T.discardSession),
