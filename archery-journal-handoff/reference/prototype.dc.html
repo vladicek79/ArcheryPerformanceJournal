@@ -1,0 +1,782 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Archery Performance Journal</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap">
+<style>
+body{margin:0;font-family:Inter,system-ui,sans-serif;color:#14181C;background:#F4F5F2}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+button:disabled{cursor:not-allowed}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid #2C6BED;outline-offset:2px}
+a{color:#0B6E4F}a:hover{color:#084C37}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; display: flex; flex-direction: column; position: relative; overflow: hidden; background: #F4F5F2; font-family: Inter, system-ui, sans-serif; color: #14181C">
+
+<header style="height: 60px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; background: #14181C; color: #FFFFFF">
+  <div style="display: flex; align-items: center; gap: 10px">
+    <svg width="28" height="28" viewBox="-100 -100 200 200" aria-hidden="true"><circle r="96" fill="#FFFFFF"></circle><circle r="76" fill="#1A1A1A"></circle><circle r="58" fill="#00A2E8"></circle><circle r="40" fill="#D22B2B"></circle><circle r="20" fill="#FFE11A"></circle></svg>
+    <div style="display: flex; flex-direction: column; gap: 1px">
+      <div style="font-family: 'Space Grotesk', Inter, sans-serif; font-weight: 700; font-size: 17px; letter-spacing: 0.2px">Performance Journal</div>
+      <div style="font-size: 12px; color: #C9CDC6">{{headerSub}}</div>
+    </div>
+  </div>
+  <button onClick="{{openGuide}}" style="height: 36px; padding: 0 12px; border-radius: 18px; border: 1px solid #4A5057; background: transparent; color: #FFFFFF; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 6px">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5V14"></path><path d="M12 17h.01"></path></svg>
+    Grades
+  </button>
+</header>
+
+<main style="flex: 1; min-height: 0; overflow-y: auto; padding: 12px 16px 24px; display: flex; flex-direction: column; gap: 12px">
+
+<!-- ================= NEW SESSION ================= -->
+<sc-if value="{{isLogStart}}" hint-placeholder-val="{{false}}">
+<div style="display: flex; flex-direction: column; gap: 14px">
+  <div style="display: flex; flex-direction: column; gap: 2px">
+    <h1 style="margin: 0; font-family: 'Space Grotesk', Inter, sans-serif; font-size: 26px">New session</h1>
+    <div style="font-size: 13px; color: #5B6168">{{todayLbl}} · Training</div>
+  </div>
+  <section style="background: #FFFFFF; border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 1px 2px rgba(20,24,28,0.06)">
+    <div style="font-size: 12px; font-weight: 700; color: #5B6168; text-transform: uppercase; letter-spacing: 0.6px">Distance</div>
+    <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px">
+      <sc-for list="{{distChips}}" as="c" hint-placeholder-count="7">
+        <button onClick="{{c.pick}}" aria-pressed="{{c.on}}" style="height: 52px; border-radius: 12px; font-size: 17px; font-weight: 700; background: {{c.bg}}; color: {{c.fg}}; border: 2px solid {{c.bd}}">{{c.label}}</button>
+      </sc-for>
+    </div>
+  </section>
+  <section style="background: #FFFFFF; border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 1px 2px rgba(20,24,28,0.06)">
+    <div style="font-size: 12px; font-weight: 700; color: #5B6168; text-transform: uppercase; letter-spacing: 0.6px">Target face</div>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+      <sc-for list="{{faceChips}}" as="c" hint-placeholder-count="5">
+        <button onClick="{{c.pick}}" aria-pressed="{{c.on}}" style="height: 52px; border-radius: 12px; font-size: 17px; font-weight: 700; background: {{c.bg}}; color: {{c.fg}}; border: 2px solid {{c.bd}}">{{c.label}}</button>
+      </sc-for>
+    </div>
+  </section>
+  <section style="background: #FFFFFF; border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 1px 2px rgba(20,24,28,0.06)">
+    <div style="font-size: 12px; font-weight: 700; color: #5B6168; text-transform: uppercase; letter-spacing: 0.6px">Arrows per end</div>
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+      <sc-for list="{{nChips}}" as="c" hint-placeholder-count="2">
+        <button onClick="{{c.pick}}" aria-pressed="{{c.on}}" style="height: 60px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; background: {{c.bg}}; color: {{c.fg}}; border: 2px solid {{c.bd}}"><span style="font-size: 18px; font-weight: 700">{{c.label}}</span><span style="font-size: 12px; font-weight: 500">{{c.sub}}</span></button>
+      </sc-for>
+    </div>
+  </section>
+  <div style="font-size: 12px; color: #5B6168; text-align: center">Picking a distance suggests the usual face and arrows per end.</div>
+  <button onClick="{{startSession}}" style="height: 58px; border-radius: 16px; border: 0; background: {{accent}}; color: #FFFFFF; font-size: 17px; font-weight: 700">Start session · {{dist}} m · {{faceLbl}}</button>
+</div>
+</sc-if>
+
+<!-- ================= LOG ================= -->
+<sc-if value="{{isLog}}" hint-placeholder-val="{{true}}">
+<div style="display: flex; flex-direction: column; gap: 12px">
+
+  <section style="display: flex; gap: 6px; flex-wrap: wrap">
+    <span style="height: 32px; padding: 0 12px; border-radius: 16px; background: #FFFFFF; border: 1px solid #DDE0DA; display: flex; align-items: center; font-size: 13px; font-weight: 700">{{dist}} m</span>
+    <span style="height: 32px; padding: 0 12px; border-radius: 16px; background: #FFFFFF; border: 1px solid #DDE0DA; display: flex; align-items: center; font-size: 13px; font-weight: 700">{{faceLbl}} face</span>
+    <span style="height: 32px; padding: 0 12px; border-radius: 16px; background: #FFFFFF; border: 1px solid #DDE0DA; display: flex; align-items: center; font-size: 13px; font-weight: 700">{{n}} arrows/end</span>
+  </section>
+
+  <section style="background: #FFFFFF; border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 1px 2px rgba(20,24,28,0.06)">
+    <div style="display: flex; justify-content: space-between; align-items: baseline">
+      <div style="font-family: 'Space Grotesk', Inter, sans-serif; font-size: 20px; font-weight: 700">End {{endNo}}</div>
+      <div style="display: flex; gap: 14px; font-variant-numeric: tabular-nums">
+        <div style="font-size: 13px; color: #5B6168">End <strong style="color: #14181C; font-size: 18px">{{endScore}}</strong></div>
+        <div style="font-size: 13px; color: #5B6168">Total <strong style="color: #14181C; font-size: 18px">{{runTotal}}</strong></div>
+      </div>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat({{n}}, minmax(0, 1fr)); gap: 4px">
+      <sc-for list="{{slots}}" as="sl" hint-placeholder-count="6">
+        <button onClick="{{sl.pick}}" aria-label="{{sl.aria}}" style="display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 0; border: 0; background: transparent; border-radius: 12px; box-shadow: inset 0 0 0 2px {{sl.ring}}">
+          <span style="width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 17px; background: {{sl.bg}}; color: {{sl.fg}}; border: 2px solid {{sl.bd}}; box-sizing: border-box">{{sl.label}}</span>
+          <span style="font-size: 11px; color: #5B6168; font-variant-numeric: tabular-nums; white-space: nowrap">{{sl.grades}}</span>
+        </button>
+      </sc-for>
+    </div>
+    <div style="display: flex; gap: 8px; align-items: center">
+      <div style="flex: 1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); background: #EDEFEA; border-radius: 12px; padding: 3px; gap: 3px">
+        <button onClick="{{setKeypad}}" aria-pressed="{{isKeypadStr}}" style="height: 38px; border: 0; border-radius: 10px; font-size: 14px; font-weight: 600; background: {{kpBg}}; color: #14181C; box-shadow: {{kpSh}}">Keypad</button>
+        <button onClick="{{setTarget}}" aria-pressed="{{isTargetStr}}" style="height: 38px; border: 0; border-radius: 10px; font-size: 14px; font-weight: 600; background: {{tgBg}}; color: #14181C; box-shadow: {{tgSh}}">Target face</button>
+      </div>
+      <button onClick="{{undo}}" aria-label="Undo last arrow" style="height: 44px; width: 44px; border-radius: 12px; border: 1px solid #C9CDC6; background: #FFFFFF; display: flex; align-items: center; justify-content: center">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"></path><path d="M4 9h11a5 5 0 0 1 0 10h-3"></path></svg>
+      </button>
+    </div>
+
+    <sc-if value="{{isKeypad}}" hint-placeholder-val="{{true}}">
+      <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px">
+        <sc-for list="{{keys}}" as="k" hint-placeholder-count="12">
+          <button onClick="{{k.tap}}" aria-label="Score {{k.label}}" style="height: 56px; border-radius: 14px; font-size: 22px; font-weight: 700; font-family: 'Space Grotesk', Inter, sans-serif; background: {{k.bg}}; color: {{k.fg}}; border: 2px solid {{k.bd}}">{{k.label}}</button>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{isTarget}}" hint-placeholder-val="{{false}}">
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 10px">
+        <div style="position: relative; width: 316px; height: 316px">
+          <button onClick="{{tapTarget}}" aria-label="Target face: tap where the arrow landed (keyboard users: use Keypad)" style="position: absolute; inset: 0; padding: 0; border: 0; background: transparent; border-radius: 50%; cursor: crosshair">
+<sc-if value="{{isFullFace}}" hint-placeholder-val="{{true}}">
+            <svg width="316" height="316" viewBox="-101 -101 202 202" aria-hidden="true" style="display: block">
+              <circle r="100" fill="#FFFFFF" stroke="#14181C" stroke-width="0.6"></circle>
+              <circle r="90" fill="#FFFFFF" stroke="#14181C" stroke-width="0.6"></circle>
+              <circle r="80" fill="#1A1A1A" stroke="#FFFFFF" stroke-width="0.6"></circle>
+              <circle r="70" fill="#1A1A1A" stroke="#FFFFFF" stroke-width="0.6"></circle>
+              <circle r="60" fill="#00A2E8" stroke="#14181C" stroke-width="0.6"></circle>
+              <circle r="50" fill="#00A2E8" stroke="#14181C" stroke-width="0.6"></circle>
+              <circle r="40" fill="#D22B2B" stroke="#14181C" stroke-width="0.6"></circle>
+              <circle r="30" fill="#D22B2B" stroke="#14181C" stroke-width="0.6"></circle>
+              <circle r="20" fill="#FFE11A" stroke="#14181C" stroke-width="0.6"></circle>
+              <circle r="10" fill="#FFE11A" stroke="#14181C" stroke-width="0.6"></circle>
+              <circle r="5" fill="none" stroke="#14181C" stroke-width="0.5"></circle>
+              <path d="M-1.5 0h3M0 -1.5v3" stroke="#14181C" stroke-width="0.5"></path>
+            </svg>
+            </sc-if>
+            <sc-if value="{{isSpotFace}}" hint-placeholder-val="{{false}}">
+            <svg width="316" height="316" viewBox="-101 -101 202 202" aria-hidden="true" style="display: block">
+              <circle r="100" fill="#00A2E8" stroke="#14181C" stroke-width="0.8"></circle>
+              <circle r="80" fill="#D22B2B" stroke="#14181C" stroke-width="0.8"></circle>
+              <circle r="60" fill="#D22B2B" stroke="#14181C" stroke-width="0.8"></circle>
+              <circle r="40" fill="#FFE11A" stroke="#14181C" stroke-width="0.8"></circle>
+              <circle r="20" fill="#FFE11A" stroke="#14181C" stroke-width="0.8"></circle>
+              <circle r="10" fill="none" stroke="#14181C" stroke-width="0.6"></circle>
+              <path d="M-2 0h4M0 -2v4" stroke="#14181C" stroke-width="0.6"></path>
+            </svg>
+            </sc-if>
+          </button>
+          <sc-for list="{{dots}}" as="d" hint-placeholder-count="0">
+            <span aria-hidden="true" style="position: absolute; left: {{d.left}}%; top: {{d.top}}%; width: {{d.size}}px; height: {{d.size}}px; margin-left: {{d.off}}px; margin-top: {{d.off}}px; border-radius: 50%; background: {{d.bg}}; border: 2px solid #FFFFFF; box-sizing: border-box; pointer-events: none; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #FFFFFF">{{d.label}}</span>
+          </sc-for>
+        </div>
+        <div style="display: flex; gap: 8px; width: 100%">
+          <button onClick="{{tapMiss}}" style="flex: 1; height: 44px; border-radius: 12px; border: 2px solid #A9AEB3; background: #D7D9DB; font-weight: 700; font-size: 15px">Miss (M)</button>
+          <button onClick="{{tapX}}" style="flex: 1; height: 44px; border-radius: 12px; border: 2px solid #C9A800; background: #FFE11A; font-weight: 700; font-size: 15px">X</button>
+        </div>
+        <div style="font-size: 12px; color: #5B6168">Previous ends shown as small dark dots.</div>
+      </div>
+    </sc-if>
+  </section>
+
+  <div style="font-size: 12px; color: #5B6168; text-align: center; margin-top: -4px">Score an arrow, then grade M and S. Tap a scored arrow above to re-grade it.</div>
+
+  <section style="background: #FFFFFF; border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 1px 2px rgba(20,24,28,0.06)">
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <div style="font-size: 12px; font-weight: 600; color: #5B6168">Let-downs</div>
+        <div style="display: flex; align-items: center; justify-content: space-between; border: 1px solid #C9CDC6; border-radius: 12px; height: 46px; padding: 0 2px">
+          <button onClick="{{ldMinus}}" aria-label="Fewer let-downs" style="width: 44px; height: 42px; border: 0; background: transparent; font-size: 22px; font-weight: 600">−</button>
+          <span style="font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums">{{ld}}</span>
+          <button onClick="{{ldPlus}}" aria-label="More let-downs" style="width: 44px; height: 42px; border: 0; background: transparent; font-size: 22px; font-weight: 600">+</button>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <div style="font-size: 12px; font-weight: 600; color: #5B6168">Correct let-downs</div>
+        <div style="display: flex; align-items: center; justify-content: space-between; border: 1px solid #C9CDC6; border-radius: 12px; height: 46px; padding: 0 2px">
+          <button onClick="{{cldMinus}}" aria-label="Fewer correct let-downs" style="width: 44px; height: 42px; border: 0; background: transparent; font-size: 22px; font-weight: 600">−</button>
+          <span style="font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums">{{cld}}</span>
+          <button onClick="{{cldPlus}}" aria-label="More correct let-downs" style="width: 44px; height: 42px; border: 0; background: transparent; font-size: 22px; font-weight: 600">+</button>
+        </div>
+      </div>
+    </div>
+    <label style="display: flex; flex-direction: column; gap: 6px; font-size: 12px; font-weight: 600; color: #5B6168">Note for this end
+      <textarea value="{{note}}" onChange="{{onNote}}" rows="2" placeholder="Conditions, feelings, what to keep…" style="border: 1px solid #C9CDC6; border-radius: 12px; padding: 10px; font-size: 14px; font-weight: 400; color: #14181C; resize: none"></textarea>
+    </label>
+    <div style="display: flex; gap: 8px">
+      <button onClick="{{saveEnd}}" disabled="{{cantSave}}" style="flex: 2; height: 52px; border-radius: 14px; border: 0; background: {{accent}}; color: #FFFFFF; font-size: 16px; font-weight: 700; opacity: {{saveOpacity}}">Save end {{endNo}}</button>
+      <button onClick="{{finish}}" disabled="{{cantFinish}}" style="flex: 1; height: 52px; border-radius: 14px; border: 2px solid #14181C; background: #FFFFFF; color: #14181C; font-size: 14px; font-weight: 700; opacity: {{finishOpacity}}">Finish session</button>
+    </div>
+  </section>
+
+  <sc-if value="{{hasEnds}}" hint-placeholder-val="{{false}}">
+    <section style="background: #FFFFFF; border-radius: 16px; padding: 6px 14px; box-shadow: 0 1px 2px rgba(20,24,28,0.06)">
+      <sc-for list="{{savedEnds}}" as="e" hint-placeholder-count="2">
+        <div style="display: grid; grid-template-columns: 34px 1fr auto; gap: 10px; align-items: center; padding: 10px 0; border-bottom: 1px solid #EDEFEA">
+          <div style="font-size: 12px; font-weight: 700; color: #5B6168">E{{e.num}}</div>
+          <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+            <div style="font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{e.arrows}}</div>
+            <div style="font-size: 12px; color: #5B6168">M {{e.m}} · S {{e.s}} · LD {{e.ld}}</div>
+          </div>
+          <div style="text-align: right; font-variant-numeric: tabular-nums">
+            <div style="font-size: 18px; font-weight: 700">{{e.score}}</div>
+            <div style="font-size: 11px; color: #5B6168">Σ {{e.run}}</div>
+          </div>
+        </div>
+      </sc-for>
+    </section>
+  </sc-if>
+</div>
+</sc-if>
+
+<!-- ================= HISTORY LIST ================= -->
+<sc-if value="{{isHistList}}" hint-placeholder-val="{{false}}">
+<div style="display: flex; flex-direction: column; gap: 10px">
+  <div style="display: flex; justify-content: space-between; align-items: baseline">
+    <h1 style="margin: 0; font-family: 'Space Grotesk', Inter, sans-serif; font-size: 24px">Training log</h1>
+    <div style="font-size: 13px; color: #5B6168">{{sessionCount}} sessions</div>
+  </div>
+  <sc-if value="{{noSessions}}" hint-placeholder-val="{{false}}">
+    <div style="background: #FFFFFF; border-radius: 16px; padding: 20px; font-size: 14px; color: #5B6168; line-height: 1.5">No sessions yet. Log ends on the Log tab, then tap Finish session.</div>
+  </sc-if>
+  <sc-for list="{{sessions}}" as="ss" hint-placeholder-count="2">
+    <button onClick="{{ss.open}}" style="text-align: left; background: #FFFFFF; border: 0; border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 1px 2px rgba(20,24,28,0.06)">
+      <div style="display: flex; justify-content: space-between; align-items: center; width: 100%">
+        <div style="display: flex; align-items: center; gap: 8px">
+          <span style="font-weight: 700; font-size: 15px">{{ss.date}}</span>
+          <sc-if value="{{ss.sample}}" hint-placeholder-val="{{false}}"><span style="font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 10px; background: #EDEFEA; color: #5B6168">Sample</span></sc-if>
+        </div>
+        <span style="font-size: 12px; color: #5B6168">{{ss.meta}}</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; align-items: flex-end; width: 100%">
+        <div style="font-family: 'Space Grotesk', Inter, sans-serif; font-variant-numeric: tabular-nums"><span style="font-size: 30px; font-weight: 700">{{ss.total}}</span><span style="font-size: 14px; color: #5B6168"> / {{ss.max}}</span></div>
+        <div style="display: flex; gap: 12px; font-size: 13px; font-variant-numeric: tabular-nums">
+          <span>M <strong>{{ss.m}}</strong></span><span>S <strong>{{ss.s}}</strong></span><span>Program <strong>{{ss.prog}}%</strong></span>
+        </div>
+      </div>
+    </button>
+  </sc-for>
+</div>
+</sc-if>
+
+<!-- ================= HISTORY DETAIL ================= -->
+<sc-if value="{{isHistDetail}}" hint-placeholder-val="{{false}}">
+<div style="display: flex; flex-direction: column; gap: 12px">
+  <div style="display: flex; align-items: center; gap: 8px">
+    <button onClick="{{closeSess}}" aria-label="Back to training log" style="width: 44px; height: 44px; border-radius: 12px; border: 1px solid #C9CDC6; background: #FFFFFF; display: flex; align-items: center; justify-content: center">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg>
+    </button>
+    <div style="display: flex; flex-direction: column">
+      <h1 style="margin: 0; font-family: 'Space Grotesk', Inter, sans-serif; font-size: 22px">{{d.date}}</h1>
+      <div style="font-size: 12px; color: #5B6168">{{d.meta}}</div>
+    </div>
+  </div>
+  <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+    <sc-for list="{{d.tiles}}" as="t" hint-placeholder-count="6">
+      <div style="background: #FFFFFF; border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px">
+        <div style="font-size: 11px; font-weight: 600; color: #5B6168; text-transform: uppercase; letter-spacing: 0.5px">{{t.label}}</div>
+        <div style="font-family: 'Space Grotesk', Inter, sans-serif; font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums">{{t.value}}</div>
+      </div>
+    </sc-for>
+  </div>
+  <section style="background: #FFFFFF; border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 10px">
+    <div style="display: flex; justify-content: space-between; align-items: baseline">
+      <div style="font-family: 'Space Grotesk', Inter, sans-serif; font-size: 16px; font-weight: 700">Avg arrow by mental grade</div>
+      <div style="font-size: 12px; color: #5B6168">LD {{d.cld}}/{{d.ld}} correct</div>
+    </div>
+    <sc-for list="{{d.byM}}" as="r" hint-placeholder-count="5">
+      <div style="display: grid; grid-template-columns: 36px 1fr 92px; gap: 10px; align-items: center">
+        <span style="height: 26px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; background: {{r.bg}}; color: {{r.fg}}">M{{r.g}}</span>
+        <div style="height: 12px; background: #EDEFEA; border-radius: 6px; overflow: hidden"><div style="height: 12px; width: {{r.w}}%; background: #14181C; border-radius: 6px"></div></div>
+        <span style="font-size: 12px; color: #5B6168; font-variant-numeric: tabular-nums; text-align: right"><strong style="color: #14181C">{{r.avg}}</strong> · {{r.n}} arr</span>
+      </div>
+    </sc-for>
+  </section>
+  <section style="background: #FFFFFF; border-radius: 16px; padding: 14px 0 6px; display: flex; flex-direction: column; gap: 8px">
+    <div style="padding: 0 14px; font-family: 'Space Grotesk', Inter, sans-serif; font-size: 16px; font-weight: 700">Ends</div>
+    <div style="overflow-x: auto">
+      <div style="min-width: 690px; display: flex; flex-direction: column; font-size: 13px; font-variant-numeric: tabular-nums">
+        <div style="display: grid; grid-template-columns: 86px 40px 150px 54px 50px 50px 64px 64px 1fr; gap: 6px; padding: 8px 14px; font-size: 11px; font-weight: 700; color: #5B6168; text-transform: uppercase; letter-spacing: 0.4px; border-bottom: 1px solid #DDE0DA">
+          <span>Date</span><span>End</span><span>Arrows</span><span>Score</span><span>M</span><span>S</span><span>Let-dn</span><span>Correct</span><span>Note</span>
+        </div>
+        <sc-for list="{{d.rows}}" as="r" hint-placeholder-count="4">
+          <div style="display: grid; grid-template-columns: 86px 40px 150px 54px 50px 50px 64px 64px 1fr; gap: 6px; padding: 9px 14px; border-bottom: 1px solid #EDEFEA; align-items: center">
+            <span style="color: #5B6168">{{r.date}}</span><span>{{r.end}}</span><span style="font-weight: 600">{{r.arrows}}</span><span style="font-weight: 700">{{r.score}}</span><span>{{r.m}}</span><span>{{r.s}}</span><span>{{r.ld}}</span><span>{{r.cld}}</span><span style="color: #5B6168">{{r.note}}</span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </section>
+</div>
+</sc-if>
+
+<!-- ================= GEAR ================= -->
+<sc-if value="{{isGear}}" hint-placeholder-val="{{false}}">
+<div style="display: flex; flex-direction: column; gap: 12px">
+  <div style="display: flex; justify-content: space-between; align-items: baseline">
+    <h1 style="margin: 0; font-family: 'Space Grotesk', Inter, sans-serif; font-size: 24px">Equipment</h1>
+    <div style="font-size: 13px; color: #5B6168">{{gearFilled}} / {{gearTotal}} filled</div>
+  </div>
+  <sc-for list="{{gearGroups}}" as="gr" hint-placeholder-count="5">
+    <section style="background: #FFFFFF; border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 8px">
+      <div style="font-family: 'Space Grotesk', Inter, sans-serif; font-size: 16px; font-weight: 700">{{gr.title}}</div>
+      <sc-for list="{{gr.fields}}" as="f" hint-placeholder-count="4">
+        <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; align-items: center">
+          <label for="{{f.id}}" style="font-size: 14px; color: #3A4047">{{f.label}}</label>
+          <input id="{{f.id}}" name="{{f.key}}" value="{{f.val}}" onChange="{{onGear}}" placeholder="{{f.ph}}" style="height: 40px; border-radius: 10px; border: 1px solid #C9CDC6; padding: 0 10px; font-size: 14px; min-width: 0">
+        </div>
+      </sc-for>
+    </section>
+  </sc-for>
+  <section style="background: #FFFFFF; border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 10px">
+    <div style="font-family: 'Space Grotesk', Inter, sans-serif; font-size: 16px; font-weight: 700">Setup snapshots</div>
+    <div style="display: flex; gap: 8px">
+      <label for="setup-name" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Snapshot name</label>
+      <input id="setup-name" value="{{setupName}}" onChange="{{onSetupName}}" placeholder="e.g. Indoor setup" style="flex: 1; height: 44px; border-radius: 12px; border: 1px solid #C9CDC6; padding: 0 12px; font-size: 14px; min-width: 0">
+      <button onClick="{{saveSnap}}" style="height: 44px; padding: 0 14px; border-radius: 12px; border: 0; background: {{accent}}; color: #FFFFFF; font-weight: 700; font-size: 14px">Save</button>
+    </div>
+    <sc-if value="{{noSnaps}}" hint-placeholder-val="{{true}}"><div style="font-size: 13px; color: #5B6168">Save a snapshot whenever you change tune, so sessions can be tied to a setup.</div></sc-if>
+    <sc-for list="{{snapshots}}" as="sn" hint-placeholder-count="0">
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-top: 1px solid #EDEFEA">
+        <div style="display: flex; flex-direction: column"><span style="font-weight: 600; font-size: 14px">{{sn.name}}</span><span style="font-size: 12px; color: #5B6168">{{sn.date}} · {{sn.filled}} fields</span></div>
+        <button onClick="{{sn.load}}" style="height: 36px; padding: 0 12px; border-radius: 10px; border: 1px solid #C9CDC6; background: #FFFFFF; font-size: 13px; font-weight: 600">Load</button>
+      </div>
+    </sc-for>
+  </section>
+</div>
+</sc-if>
+
+<!-- ================= SIGHTS ================= -->
+<sc-if value="{{isSights}}" hint-placeholder-val="{{false}}">
+<div style="display: flex; flex-direction: column; gap: 12px">
+  <h1 style="margin: 0; font-family: 'Space Grotesk', Inter, sans-serif; font-size: 24px">Sight marks</h1>
+  <section style="background: #FFFFFF; border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 6px">
+    <div style="display: grid; grid-template-columns: 64px 1fr 1fr 1fr; gap: 6px; font-size: 11px; font-weight: 700; color: #5B6168; text-transform: uppercase; letter-spacing: 0.4px">
+      <span>Dist.</span><span>Elevation</span><span>Windage</span><span>Note</span>
+    </div>
+    <sc-for list="{{sightRows}}" as="r" hint-placeholder-count="6">
+      <div style="display: grid; grid-template-columns: 64px 1fr 1fr 1fr; gap: 6px">
+        <input name="{{r.nDist}}" value="{{r.dist}}" onChange="{{onSight}}" aria-label="{{r.aDist}}" style="height: 40px; border-radius: 10px; border: 1px solid #C9CDC6; padding: 0 8px; font-size: 14px; font-weight: 700; min-width: 0">
+        <input name="{{r.nElev}}" value="{{r.elev}}" onChange="{{onSight}}" aria-label="{{r.aElev}}" style="height: 40px; border-radius: 10px; border: 1px solid #C9CDC6; padding: 0 8px; font-size: 14px; min-width: 0">
+        <input name="{{r.nWind}}" value="{{r.wind}}" onChange="{{onSight}}" aria-label="{{r.aWind}}" style="height: 40px; border-radius: 10px; border: 1px solid #C9CDC6; padding: 0 8px; font-size: 14px; min-width: 0">
+        <input name="{{r.nNote}}" value="{{r.note}}" onChange="{{onSight}}" aria-label="{{r.aNote}}" style="height: 40px; border-radius: 10px; border: 1px solid #C9CDC6; padding: 0 8px; font-size: 14px; min-width: 0">
+      </div>
+    </sc-for>
+    <button onClick="{{addSight}}" style="margin-top: 4px; height: 44px; border-radius: 12px; border: 1px dashed #A9AEB3; background: transparent; font-weight: 600; font-size: 14px">+ Add distance</button>
+  </section>
+
+  <h2 style="margin: 8px 0 0; font-family: 'Space Grotesk', Inter, sans-serif; font-size: 20px">Competition log</h2>
+  <section style="background: #FFFFFF; border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 8px">
+    <sc-for list="{{compFields}}" as="f" hint-placeholder-count="7">
+      <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 10px; align-items: center">
+        <label for="{{f.id}}" style="font-size: 14px; color: #3A4047">{{f.label}}</label>
+        <input id="{{f.id}}" name="{{f.key}}" value="{{f.val}}" onChange="{{onComp}}" placeholder="{{f.ph}}" style="height: 40px; border-radius: 10px; border: 1px solid #C9CDC6; padding: 0 10px; font-size: 14px; min-width: 0">
+      </div>
+    </sc-for>
+    <button onClick="{{addComp}}" style="margin-top: 4px; height: 48px; border-radius: 14px; border: 0; background: {{accent}}; color: #FFFFFF; font-weight: 700; font-size: 15px">Add competition</button>
+  </section>
+  <sc-for list="{{comps}}" as="c" hint-placeholder-count="0">
+    <div style="background: #FFFFFF; border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 4px">
+      <div style="display: flex; justify-content: space-between; align-items: baseline">
+        <span style="font-weight: 700; font-size: 15px">{{c.event}}</span>
+        <span style="font-family: 'Space Grotesk', Inter, sans-serif; font-size: 22px; font-weight: 700">{{c.score}}</span>
+      </div>
+      <div style="font-size: 12px; color: #5B6168">{{c.line1}}</div>
+      <div style="font-size: 12px; color: #5B6168">{{c.line2}}</div>
+    </div>
+  </sc-for>
+</div>
+</sc-if>
+
+</main>
+
+<nav aria-label="Sections" style="height: 66px; flex: none; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); background: #FFFFFF; border-top: 1px solid #DDE0DA">
+  <button onClick="{{goLog}}" style="border: 0; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 12px; font-weight: 600; color: {{cLog}}">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="5"></circle><circle cx="12" cy="12" r="1"></circle></svg>
+    Log
+  </button>
+  <button onClick="{{goHistory}}" style="border: 0; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 12px; font-weight: 600; color: {{cHistory}}">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19V5"></path><path d="M4 19h16"></path><path d="M8 15l4-5 3 3 5-6"></path></svg>
+    History
+  </button>
+  <button onClick="{{goGear}}" style="border: 0; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 12px; font-weight: 600; color: {{cGear}}">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"></path><circle cx="16" cy="6" r="2"></circle><circle cx="10" cy="12" r="2"></circle><circle cx="18" cy="18" r="2"></circle></svg>
+    Gear
+  </button>
+  <button onClick="{{goSights}}" style="border: 0; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 12px; font-weight: 600; color: {{cSights}}">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="7"></circle><path d="M12 2v5M12 17v5M2 12h5M17 12h5"></path></svg>
+    Sights
+  </button>
+</nav>
+
+<sc-if value="{{asking}}" hint-placeholder-val="{{false}}">
+  <div style="position: absolute; left: 0; right: 0; top: 60px; bottom: 0; background: rgba(20,24,28,0.45); display: flex; flex-direction: column; justify-content: flex-end">
+    <div role="dialog" aria-label="{{qAria}}" style="background: #FFFFFF; border-radius: 22px 22px 0 0; padding: 16px 16px 20px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 -8px 24px rgba(20,24,28,0.18)">
+      <div style="display: flex; align-items: center; gap: 12px">
+        <span style="width: 50px; height: 50px; border-radius: 50%; flex: none; display: flex; align-items: center; justify-content: center; font-family: 'Space Grotesk', Inter, sans-serif; font-weight: 700; font-size: 21px; background: {{qScoreBg}}; color: {{qScoreFg}}; border: 2px solid {{qScoreBd}}; box-sizing: border-box">{{activeScore}}</span>
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0">
+          <div style="font-size: 12px; color: #5B6168; font-weight: 600">Arrow {{activeNo}} of {{n}} · Step {{qStep}} of 2</div>
+          <div style="font-family: 'Space Grotesk', Inter, sans-serif; font-size: 21px; font-weight: 700">{{qTitle}}</div>
+        </div>
+        <button onClick="{{skipGrade}}" aria-label="Skip grading this arrow" style="height: 44px; padding: 0 14px; border-radius: 22px; border: 1px solid #C9CDC6; background: #FFFFFF; font-size: 13px; font-weight: 600">Skip</button>
+      </div>
+      <div style="display: flex; gap: 6px" aria-hidden="true">
+        <span style="flex: 1; height: 4px; border-radius: 2px; background: {{accent}}"></span>
+        <span style="flex: 1; height: 4px; border-radius: 2px; background: {{qBar2}}"></span>
+      </div>
+      <sc-for list="{{qRows}}" as="q" hint-placeholder-count="5">
+        <button onClick="{{q.tap}}" aria-pressed="{{q.on}}" style="display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 8px 12px; border-radius: 14px; text-align: left; background: {{q.rowBg}}; border: 2px solid {{q.rowBd}}">
+          <span style="width: 42px; height: 42px; border-radius: 10px; flex: none; display: flex; align-items: center; justify-content: center; font-family: 'Space Grotesk', Inter, sans-serif; font-size: 21px; font-weight: 700; background: {{q.bg}}; color: {{q.fg}}">{{q.g}}</span>
+          <span style="font-size: 14px; line-height: 1.35; font-weight: 500; color: #14181C">{{q.text}}</span>
+        </button>
+      </sc-for>
+      <div style="display: flex; justify-content: space-between; gap: 8px; padding-top: 2px">
+        <sc-if value="{{isStepS}}" hint-placeholder-val="{{false}}">
+          <button onClick="{{backToM}}" style="height: 44px; padding: 0 14px; border-radius: 12px; border: 1px solid #C9CDC6; background: #FFFFFF; font-size: 14px; font-weight: 600">← Back to M</button>
+        </sc-if>
+        <span style="flex: 1"></span>
+        <button onClick="{{changeScore}}" style="height: 44px; padding: 0 14px; border-radius: 12px; border: 1px solid #C9CDC6; background: #FFFFFF; font-size: 14px; font-weight: 600">Change score</button>
+      </div>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{showGuide}}" hint-placeholder-val="{{false}}">
+  <div style="position: absolute; inset: 0; background: rgba(20,24,28,0.55); display: flex; flex-direction: column; justify-content: flex-end">
+    <div role="dialog" aria-label="Grading guide" style="background: #FFFFFF; border-radius: 22px 22px 0 0; padding: 18px 16px 22px; display: flex; flex-direction: column; gap: 10px; max-height: 760px; overflow-y: auto">
+      <div style="display: flex; justify-content: space-between; align-items: center">
+        <div style="font-family: 'Space Grotesk', Inter, sans-serif; font-size: 20px; font-weight: 700">Grading guide</div>
+        <button onClick="{{closeGuide}}" aria-label="Close grading guide" style="width: 44px; height: 44px; border-radius: 22px; border: 1px solid #C9CDC6; background: #FFFFFF; display: flex; align-items: center; justify-content: center">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+        </button>
+      </div>
+      <div style="font-size: 13px; color: #5B6168; line-height: 1.45">Grade the process, not the score. M = mental program, S = shooting cycle. 1 is best.</div>
+      <div style="display: grid; grid-template-columns: 34px 1fr 1fr; gap: 8px; font-size: 11px; font-weight: 700; color: #5B6168; text-transform: uppercase; letter-spacing: 0.4px; padding-top: 4px">
+        <span></span><span>Mental program (M)</span><span>Shooting cycle (S)</span>
+      </div>
+      <sc-for list="{{guideRows}}" as="g" hint-placeholder-count="5">
+        <div style="display: grid; grid-template-columns: 34px 1fr 1fr; gap: 8px; align-items: start; padding: 8px 0; border-top: 1px solid #EDEFEA; font-size: 13px; line-height: 1.4">
+          <span style="height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 700; background: {{g.bg}}; color: {{g.fg}}">{{g.g}}</span>
+          <span>{{g.m}}</span>
+          <span>{{g.s}}</span>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#0B6E4F","options":["#0B6E4F","#14181C","#1D4ED8","#B45309"]},"defaultMode":{"editor":"enum","default":"target","options":["keypad","target"]},"askGrades":{"editor":"boolean","default":true},"sampleData":{"editor":"boolean","default":true},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(...args) {
+    super(...args);
+    this.state = {
+      tab: 'log', active: false, mode: null, n: 6, dist: '70', face: '122',
+      end: [null, null, null, null, null, null], cur: 0, pinned: false,
+      ld: 0, cld: 0, note: '', ends: [], sessions: [], open: null, showGuide: false,
+      gear: {}, setupName: '', snapshots: [],
+      sights: ['18', '30', '50', '60', '70', '90'].map(function (d) { return { dist: d + ' m', elev: '', wind: '', note: '' }; }),
+      comp: {}, comps: []
+    };
+  }
+  st() { return this.state || {}; }
+  today() { return new Date().toISOString().slice(0, 10); }
+  val(v) { return v === 'X' ? 10 : (v === 'M' ? 0 : Number(v)); }
+  zone(v) {
+    if (v == null) return { bg: '#FFFFFF', fg: '#8A9097', bd: '#DDE0DA' };
+    if (v === 'X' || v === 10 || v === 9) return { bg: '#FFE11A', fg: '#14181C', bd: '#C9A800' };
+    if (v === 8 || v === 7) return { bg: '#D22B2B', fg: '#FFFFFF', bd: '#D22B2B' };
+    if (v === 6 || v === 5) return { bg: '#00A2E8', fg: '#0A0A0A', bd: '#0086C0' };
+    if (v === 4 || v === 3) return { bg: '#1A1A1A', fg: '#FFFFFF', bd: '#1A1A1A' };
+    if (v === 2 || v === 1) return { bg: '#FFFFFF', fg: '#14181C', bd: '#14181C' };
+    return { bg: '#D7D9DB', fg: '#14181C', bd: '#A9AEB3' };
+  }
+  gc(g) {
+    return [null,
+      { bg: '#0B6E4F', fg: '#FFFFFF' }, { bg: '#7CC29A', fg: '#14181C' }, { bg: '#F2D65C', fg: '#14181C' },
+      { bg: '#F2994A', fg: '#14181C' }, { bg: '#B3261E', fg: '#FFFFFF' }][g] || { bg: '#EDEFEA', fg: '#14181C' };
+  }
+  sum(arrows) { var self = this; return arrows.reduce(function (t, a) { return t + self.val(a.v); }, 0); }
+  stats(ends) {
+    var self = this; var arrows = [];
+    ends.forEach(function (e) { e.arrows.forEach(function (a) { arrows.push(a); }); });
+    var total = this.sum(arrows);
+    var gm = arrows.filter(function (a) { return a.m; }), gs = arrows.filter(function (a) { return a.s; });
+    var avg = function (xs, k) { return xs.length ? xs.reduce(function (t, a) { return t + a[k]; }, 0) / xs.length : null; };
+    var mA = avg(gm, 'm'), sA = avg(gs, 's');
+    var prog = gm.length ? Math.round(gm.filter(function (a) { return a.m <= 2; }).length / gm.length * 100) : null;
+    var byM = [1, 2, 3, 4, 5].map(function (g) {
+      var xs = arrows.filter(function (a) { return a.m === g; });
+      var av = xs.length ? self.sum(xs) / xs.length : 0;
+      var c = self.gc(g);
+      return { g: g, n: xs.length, avg: xs.length ? av.toFixed(1) : '–', w: Math.round(av * 10), bg: c.bg, fg: c.fg };
+    });
+    return {
+      n: arrows.length, total: total, max: arrows.length * 10,
+      avgArrow: arrows.length ? (total / arrows.length).toFixed(2) : '–',
+      m: mA == null ? '–' : mA.toFixed(1), s: sA == null ? '–' : sA.toFixed(1),
+      prog: prog == null ? '–' : prog,
+      xs: arrows.filter(function (a) { return a.v === 'X'; }).length,
+      tens: arrows.filter(function (a) { return a.v === 'X' || a.v === 10; }).length,
+      ld: ends.reduce(function (t, e) { return t + (e.ld || 0); }, 0),
+      cld: ends.reduce(function (t, e) { return t + (e.cld || 0); }, 0),
+      byM: byM
+    };
+  }
+  sample() {
+    var raw = [
+      [[10, 1, 1], [9, 2, 1], ['X', 1, 1], [8, 3, 2], [9, 2, 2], [7, 4, 3]],
+      [[9, 1, 1], [9, 1, 2], [10, 1, 1], [8, 2, 2], ['X', 1, 1], [9, 2, 1]],
+      [[7, 4, 4], [8, 3, 3], [9, 2, 2], [6, 5, 4], [9, 2, 2], [8, 3, 2]],
+      [[10, 1, 1], [9, 1, 1], [9, 2, 1], [10, 1, 1], [8, 2, 2], [9, 1, 2]]
+    ];
+    var meta = [[1, 1, ''], [0, 0, ''], [2, 1, 'Sample note: gusty, rushed release'], [1, 1, '']];
+    return {
+      id: 'sample', sample: true, date: 'Sample', dist: '70', face: '122',
+      ends: raw.map(function (r, i) {
+        return { arrows: r.map(function (a) { return { v: a[0], m: a[1], s: a[2], x: null, y: null }; }), ld: meta[i][0], cld: meta[i][1], note: meta[i][2] };
+      })
+    };
+  }
+  renderVals() {
+    var self = this; var s = this.st();
+    var accent = this.props.accent ?? '#0B6E4F';
+    
+    var showSample = this.props.sampleData ?? true;
+    var mode = s.mode || this.props.defaultMode || 'target';
+    var M = ['Full program arrow, clear picture', 'One small intrusion, let down correctly', 'Shot with doubt or form thoughts', 'Program mostly missing; thinking about score or form', 'No program, fighting the shot'];
+    var S = ['Automatic, continuous expansion, clicker on time', 'Minor hesitation or form issue', 'Slow or hesitant', 'Slow expansion', 'Cycle falls apart'];
+    var n = s.n; var end = s.end;
+    var fl = function (f) { return f === '40s' ? '40 cm 10–6' : f + ' cm'; };
+    var spot = s.face === '40s';
+    var nextEmpty = function (arr) { for (var i = 0; i < arr.length; i++) { if (!arr[i] || arr[i].v == null) return i; } return -1; };
+
+    var enter = function (v, x, y) {
+      var st = self.st(); var e = st.end.slice(); var cur = st.cur;
+      if (!st.pinned && e[cur] && e[cur].v != null) { var ne = nextEmpty(e); if (ne < 0) return; cur = ne; }
+      e[cur] = Object.assign({}, e[cur] || {}, { v: v, x: x == null ? null : x, y: y == null ? null : y });
+      var gradeEachNow = self.props.askGrades ?? true;
+      if (gradeEachNow) { self.setState({ end: e, cur: cur, pinned: false, asking: true, step: 'm' }); return; }
+      var ne2 = nextEmpty(e); if (ne2 >= 0) cur = ne2;
+      self.setState({ end: e, cur: cur, pinned: false });
+    };
+    var advance = function (e) { var upd = { asking: false, step: 'm', pinned: false }; if (e) upd.end = e; var ne = nextEmpty(e || self.st().end); if (ne >= 0) upd.cur = ne; self.setState(upd); };
+    var grade = function (kind, g) {
+      var st = self.st(); var e = st.end.slice(); var cur = st.cur;
+      var a = Object.assign({}, e[cur] || {}); a[kind] = g; e[cur] = a;
+      if (kind === 'm') { self.setState({ end: e, step: 's' }); return; }
+      advance(e);
+    };
+    var bump = function (k, d) {
+      var st = self.st(); var v = Math.max(0, (st[k] || 0) + d); var upd = {}; upd[k] = v;
+      if (k === 'ld' && st.cld > v) upd.cld = v;
+      if (k === 'cld' && v > st.ld) upd.ld = v;
+      self.setState(upd);
+    };
+
+    var slots = end.map(function (a, i) {
+      var v = a && a.v != null ? a.v : null; var z = self.zone(v); var active = i === s.cur;
+      return {
+        label: v == null ? String(i + 1) : String(v), bg: z.bg, fg: z.fg, bd: z.bd,
+        ring: active ? accent : 'transparent',
+        grades: 'M' + (a && a.m ? a.m : '–') + ' S' + (a && a.s ? a.s : '–'),
+        aria: 'Arrow ' + (i + 1) + (v == null ? ', empty' : ', ' + v) + (active ? ', selected' : ''),
+        pick: function () { if (v != null) self.setState({ cur: i, pinned: true, asking: true, step: 'm' }); else self.setState({ cur: i, pinned: true }); }
+      };
+    });
+    var filled = end.filter(function (a) { return a && a.v != null; });
+    var endScore = this.sum(filled);
+    var savedTotal = s.ends.reduce(function (t, e) { return t + self.sum(e.arrows); }, 0);
+    var keys = (spot ? ['X', 10, 9, 8, 7, 6, 'M'] : ['X', 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 'M']).map(function (k) {
+      var z = self.zone(k); return { label: String(k), bg: z.bg, fg: z.fg, bd: z.bd, tap: function () { enter(k, null, null); } };
+    });
+    var act = end[s.cur] || {};
+    var btns = function (kind, txt) {
+      return [1, 2, 3, 4, 5].map(function (g) {
+        var on = act[kind] === g;
+        var c = self.gc(g);
+        return { g: g, on: on ? 'true' : 'false', bg: on ? c.bg : '#FFFFFF', fg: on ? c.fg : '#14181C', bd: on ? c.bg : '#C9CDC6',
+          aria: (kind === 'm' ? 'Mental grade ' : 'Shot cycle grade ') + g + ': ' + txt[g - 1],
+          tap: function () { grade(kind, g); } };
+      });
+    };
+    var dots = [];
+    s.ends.forEach(function (e) { e.arrows.forEach(function (a) { if (a.x != null) dots.push({ left: (a.x + 1) * 50, top: (a.y + 1) * 50, size: 10, off: -5, bg: 'rgba(20,24,28,0.6)', label: '' }); }); });
+    end.forEach(function (a, i) { if (a && a.x != null) dots.push({ left: (a.x + 1) * 50, top: (a.y + 1) * 50, size: 20, off: -10, bg: '#E5007E', label: String(i + 1) }); });
+
+    var run = 0;
+    var savedEnds = s.ends.map(function (e, i) {
+      var sc = self.sum(e.arrows); run += sc; var st = self.stats([e]);
+      return { num: i + 1, arrows: e.arrows.map(function (a) { return String(a.v); }).join('  '), score: sc, run: run, m: st.m, s: st.s, ld: e.cld + '/' + e.ld };
+    }).reverse();
+
+    // history
+    var all = s.sessions.concat(showSample ? [this.sample()] : []);
+    var sessions = all.map(function (ss) {
+      var st = self.stats(ss.ends);
+      return { date: ss.sample ? 'Example session' : ss.date, sample: !!ss.sample, meta: ss.dist + ' m · ' + fl(ss.face) + ' · ' + ss.ends.length + ' ends',
+        total: st.total, max: st.max, m: st.m, s: st.s, prog: st.prog, open: function () { self.setState({ open: ss.id }); } };
+    });
+    var openSess = null; all.forEach(function (x) { if (x.id === s.open) openSess = x; });
+    var d = { date: '', meta: '', tiles: [], byM: [], rows: [], ld: 0, cld: 0 };
+    if (openSess) {
+      var ds = this.stats(openSess.ends);
+      var dateLbl = openSess.sample ? 'Sample' : openSess.date;
+      d = {
+        date: openSess.sample ? 'Example session' : openSess.date,
+        meta: openSess.dist + ' m · ' + fl(openSess.face) + ' · ' + ds.n + ' arrows',
+        tiles: [
+          { label: 'Total', value: ds.total }, { label: 'Avg arrow', value: ds.avgArrow }, { label: '10s (X)', value: ds.tens + ' (' + ds.xs + ')' },
+          { label: 'Avg M', value: ds.m }, { label: 'Avg S', value: ds.s }, { label: 'M1–2 %', value: ds.prog + '%' }
+        ],
+        byM: ds.byM, ld: ds.ld, cld: ds.cld,
+        rows: openSess.ends.map(function (e, i) {
+          var es = self.stats([e]);
+          return { date: dateLbl, end: i + 1, arrows: e.arrows.map(function (a) { return String(a.v); }).join(' '), score: self.sum(e.arrows), m: es.m, s: es.s, ld: e.ld, cld: e.cld, note: e.note || '—' };
+        })
+      };
+    }
+
+    // gear
+    var G = [
+      { title: 'Bow', fields: [['riser', 'Riser', 'model'], ['limbsModel', 'Limbs model', 'model'], ['limbsLbs', 'Limbs poundage', 'lbs'], ['drawWeight', 'Draw weight on fingers', 'lbs']] },
+      { title: 'Arrows', fields: [['arrowModel', 'Arrow model', 'model'], ['spine', 'Spine', ''], ['arrowLength', 'Length', 'in'], ['points', 'Points', 'grain'], ['nocks', 'Nocks', '']] },
+      { title: 'String', fields: [['stringMat', 'Material', ''], ['strands', 'Strands', 'count'], ['brace', 'Brace height', 'in'], ['nockPoint', 'Nocking point', 'mm']] },
+      { title: 'Tuning', fields: [['tillerTop', 'Tiller top', 'mm'], ['tillerBottom', 'Tiller bottom', 'mm'], ['plungerTension', 'Plunger tension', ''], ['plungerPos', 'Plunger position', ''], ['rest', 'Arrow rest', ''], ['clicker', 'Clicker position', '']] },
+      { title: 'Stabilisers & accessories', fields: [['stabLong', 'Long rod', 'length'], ['stabSides', 'Side rods', 'length'], ['vbar', 'V-bar', 'angle'], ['stabWeights', 'Weights', 'oz'], ['tab', 'Tab', ''], ['sight', 'Sight', '']] }
+    ];
+    var gearTotal = 0;
+    var gearGroups = G.map(function (gr) {
+      gearTotal += gr.fields.length;
+      return { title: gr.title, fields: gr.fields.map(function (f) { return { key: f[0], id: 'g-' + f[0], label: f[1], ph: f[2], val: s.gear[f[0]] || '' }; }) };
+    });
+    var gearFilled = Object.keys(s.gear).filter(function (k) { return s.gear[k]; }).length;
+
+    // competitions
+    var CF = [['date', 'Date', 'YYYY-MM-DD'], ['event', 'Event', ''], ['round', 'Round', 'e.g. 70 m round'], ['score', 'Score', ''], ['mark', 'Sight mark used', ''], ['cond', 'Conditions', 'wind, light'], ['note', 'Notes', '']];
+    var compFields = CF.map(function (f) { return { key: f[0], id: 'c-' + f[0], label: f[1], ph: f[2], val: s.comp[f[0]] || '' }; });
+    var comps = s.comps.map(function (c) {
+      return { event: c.event || 'Competition', score: c.score || '—',
+        line1: [c.date, c.round].filter(Boolean).join(' · ') || '—',
+        line2: ['Sight ' + (c.mark || '—'), c.cond, c.note].filter(Boolean).join(' · ') };
+    });
+
+    var tabC = function (t) { return s.tab === t ? accent : '#5B6168'; };
+    var subs = { log: s.active ? s.dist + ' m · ' + fl(s.face) + ' · ' + n + ' arrows/end' : 'Start a session', history: 'Training log', gear: 'Equipment', sights: 'Sight marks & competitions' };
+    var canSave = filled.length === n;
+    var go = function (t) { return function () { self.setState({ tab: t, open: t === 'history' ? self.st().open : null }); }; };
+
+    return {
+      accent: accent, headerSub: subs[s.tab],
+      isLog: s.tab === 'log' && !!s.active, isLogStart: s.tab === 'log' && !s.active, isHistList: s.tab === 'history' && !openSess, isHistDetail: s.tab === 'history' && !!openSess,
+      isGear: s.tab === 'gear', isSights: s.tab === 'sights',
+      goLog: go('log'), goHistory: function () { self.setState({ tab: 'history', open: null }); }, goGear: go('gear'), goSights: go('sights'),
+      cLog: tabC('log'), cHistory: tabC('history'), cGear: tabC('gear'), cSights: tabC('sights'),
+      showGuide: !!s.showGuide, openGuide: function () { self.setState({ showGuide: true }); }, closeGuide: function () { self.setState({ showGuide: false }); },
+      guideRows: [1, 2, 3, 4, 5].map(function (g) { var c = self.gc(g); return { g: g, m: M[g - 1], s: S[g - 1], bg: c.bg, fg: c.fg }; }),
+
+      todayLbl: new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }),
+      distChips: ['18', '25', '30', '50', '60', '70', '90'].map(function (dv) {
+        var on = s.dist === dv;
+        return { label: dv + ' m', on: on ? 'true' : 'false', bg: on ? '#14181C' : '#FFFFFF', fg: on ? '#FFFFFF' : '#14181C', bd: on ? '#14181C' : '#C9CDC6',
+          pick: function () { var fm = { '18': '40s', '25': '60', '30': '80', '50': '122', '60': '122', '70': '122', '90': '122' }; self.setState({ dist: dv, face: fm[dv], n: (dv === '18' || dv === '25') ? 3 : 6 }); } };
+      }),
+      faceChips: ['40s', '40', '60', '80', '122'].map(function (fv) {
+        var on = s.face === fv;
+        return { label: fl(fv), on: on ? 'true' : 'false', bg: on ? '#14181C' : '#FFFFFF', fg: on ? '#FFFFFF' : '#14181C', bd: on ? '#14181C' : '#C9CDC6',
+          pick: function () { self.setState({ face: fv }); } };
+      }),
+      nChips: [3, 6].map(function (nv) {
+        var on = s.n === nv;
+        return { label: nv + ' arrows', sub: nv === 3 ? 'indoor style' : 'outdoor style', on: on ? 'true' : 'false', bg: on ? '#14181C' : '#FFFFFF', fg: on ? '#FFFFFF' : '#14181C', bd: on ? '#14181C' : '#C9CDC6',
+          pick: function () { self.setState({ n: nv }); } };
+      }),
+      startSession: function () { var st = self.st(); var arr = []; for (var i = 0; i < st.n; i++) arr.push(null); self.setState({ active: true, end: arr, cur: 0, pinned: false, asking: false, ends: [], ld: 0, cld: 0, note: '' }); },
+      dist: s.dist, face: s.face, faceLbl: fl(s.face), isFullFace: !spot, isSpotFace: spot, n: n, nStr: String(n),
+      onDist: function (e) { self.setState({ dist: e.target.value }); },
+      onFace: function (e) { self.setState({ face: e.target.value }); },
+      onN: function (e) { var v = Number(e.target.value); var arr = []; for (var i = 0; i < v; i++) arr.push(null); self.setState({ n: v, end: arr, cur: 0, pinned: false }); },
+      endNo: s.ends.length + 1, endScore: endScore, runTotal: savedTotal + endScore,
+      slots: slots, keys: keys, dots: dots,
+      isKeypad: mode === 'keypad', isTarget: mode === 'target',
+      isKeypadStr: mode === 'keypad' ? 'true' : 'false', isTargetStr: mode === 'target' ? 'true' : 'false',
+      kpBg: mode === 'keypad' ? '#FFFFFF' : 'transparent', tgBg: mode === 'target' ? '#FFFFFF' : 'transparent',
+      kpSh: mode === 'keypad' ? '0 1px 3px rgba(20,24,28,0.18)' : 'none', tgSh: mode === 'target' ? '0 1px 3px rgba(20,24,28,0.18)' : 'none',
+      setKeypad: function () { self.setState({ mode: 'keypad' }); }, setTarget: function () { self.setState({ mode: 'target' }); },
+      tapTarget: function (ev) {
+        if (ev.detail === 0) return;
+        var r = ev.currentTarget.getBoundingClientRect();
+        var x = ((ev.clientX - r.left) / r.width) * 2 - 1, y = ((ev.clientY - r.top) / r.height) * 2 - 1;
+        var dd = Math.sqrt(x * x + y * y); var v;
+        if (spot) { if (dd <= 0.1) v = 'X'; else if (dd < 1) v = 10 - Math.floor(dd * 5); else v = 'M'; }
+        else { if (dd <= 0.05) v = 'X'; else if (dd < 1) v = 10 - Math.floor(dd * 10); else v = 'M'; }
+        enter(v, dd < 1.05 ? x : null, dd < 1.05 ? y : null);
+      },
+      tapMiss: function () { enter('M', null, null); }, tapX: function () { enter('X', null, null); },
+      undo: function () {
+        var st = self.st(); var e = st.end.slice(); var last = -1;
+        for (var i = e.length - 1; i >= 0; i--) { if (e[i] && e[i].v != null) { last = i; break; } }
+        if (last < 0) return; e[last] = null; self.setState({ end: e, cur: last, pinned: false });
+      },
+      activeNo: s.cur + 1, activeScore: act.v != null ? String(act.v) : '—',
+      asking: !!s.asking && s.tab === 'log' && !!s.active,
+      qStep: s.step === 's' ? 2 : 1, isStepS: s.step === 's',
+      qTitle: s.step === 's' ? 'Shooting cycle (S)' : 'Mental program (M)',
+      qAria: 'Grade arrow ' + (s.cur + 1) + ': ' + (s.step === 's' ? 'shooting cycle' : 'mental program'),
+      qBar2: s.step === 's' ? accent : '#DDE0DA',
+      qScoreBg: this.zone(act.v != null ? act.v : null).bg, qScoreFg: this.zone(act.v != null ? act.v : null).fg, qScoreBd: this.zone(act.v != null ? act.v : null).bd,
+      qRows: (function () {
+        var kind = s.step === 's' ? 's' : 'm'; var txt = kind === 's' ? S : M;
+        return [1, 2, 3, 4, 5].map(function (g) {
+          var c = self.gc(g); var on = act[kind] === g;
+          return { g: g, text: txt[g - 1], bg: c.bg, fg: c.fg, on: on ? 'true' : 'false',
+            rowBg: on ? '#F4F5F2' : '#FFFFFF', rowBd: on ? accent : '#DDE0DA',
+            tap: function () { grade(kind, g); } };
+        });
+      })(),
+      skipGrade: function () { advance(null); },
+      backToM: function () { self.setState({ step: 'm' }); },
+      changeScore: function () { self.setState({ asking: false, step: 'm', pinned: true }); },
+      mBtns: btns('m', M), sBtns: btns('s', S),
+      mText: act.m ? 'M' + act.m + ' · ' + M[act.m - 1] : 'Was the mental program there?',
+      sText: act.s ? 'S' + act.s + ' · ' + S[act.s - 1] : 'How did the shot cycle flow?',
+      ld: s.ld, cld: s.cld,
+      ldMinus: function () { bump('ld', -1); }, ldPlus: function () { bump('ld', 1); },
+      cldMinus: function () { bump('cld', -1); }, cldPlus: function () { bump('cld', 1); },
+      note: s.note, onNote: function (e) { self.setState({ note: e.target.value }); },
+      cantSave: !canSave, saveOpacity: canSave ? 1 : 0.4,
+      saveEnd: function () {
+        var st = self.st(); if (st.end.some(function (a) { return !a || a.v == null; })) return;
+        var arr = []; for (var i = 0; i < st.n; i++) arr.push(null);
+        self.setState({ ends: st.ends.concat([{ arrows: st.end.map(function (a) { return Object.assign({}, a); }), ld: st.ld, cld: st.cld, note: st.note }]), end: arr, cur: 0, pinned: false, ld: 0, cld: 0, note: '' });
+      },
+      cantFinish: s.ends.length === 0, finishOpacity: s.ends.length ? 1 : 0.4,
+      finish: function () {
+        var st = self.st(); if (!st.ends.length) return; var id = 's' + Date.now();
+        self.setState({ sessions: [{ id: id, date: self.today(), dist: st.dist, face: st.face, ends: st.ends }].concat(st.sessions), ends: [], active: false, asking: false, tab: 'history', open: id });
+      },
+      hasEnds: s.ends.length > 0, savedEnds: savedEnds,
+
+      sessions: sessions, sessionCount: sessions.length, noSessions: sessions.length === 0,
+      closeSess: function () { self.setState({ open: null }); }, d: d,
+
+      gearGroups: gearGroups, gearTotal: gearTotal, gearFilled: gearFilled,
+      onGear: function (e) { var g = Object.assign({}, self.st().gear); g[e.target.name] = e.target.value; self.setState({ gear: g }); },
+      setupName: s.setupName, onSetupName: function (e) { self.setState({ setupName: e.target.value }); },
+      saveSnap: function () {
+        var st = self.st(); var g = Object.assign({}, st.gear);
+        var snap = { name: st.setupName || ('Setup ' + (st.snapshots.length + 1)), date: self.today(), gear: g };
+        self.setState({ snapshots: [snap].concat(st.snapshots), setupName: '' });
+      },
+      noSnaps: s.snapshots.length === 0,
+      snapshots: s.snapshots.map(function (sn) {
+        return { name: sn.name, date: sn.date, filled: Object.keys(sn.gear).filter(function (k) { return sn.gear[k]; }).length,
+          load: function () { self.setState({ gear: Object.assign({}, sn.gear) }); } };
+      }),
+
+      sightRows: s.sights.map(function (r, i) {
+        return { dist: r.dist, elev: r.elev, wind: r.wind, note: r.note,
+          nDist: 'dist|' + i, nElev: 'elev|' + i, nWind: 'wind|' + i, nNote: 'note|' + i,
+          aDist: 'Distance, row ' + (i + 1), aElev: 'Elevation for ' + r.dist, aWind: 'Windage for ' + r.dist, aNote: 'Note for ' + r.dist };
+      }),
+      onSight: function (e) {
+        var p = e.target.name.split('|'); var rows = self.st().sights.map(function (r) { return Object.assign({}, r); });
+        rows[Number(p[1])][p[0]] = e.target.value; self.setState({ sights: rows });
+      },
+      addSight: function () { self.setState({ sights: self.st().sights.concat([{ dist: '', elev: '', wind: '', note: '' }]) }); },
+      compFields: compFields, comps: comps,
+      onComp: function (e) { var c = Object.assign({}, self.st().comp); c[e.target.name] = e.target.value; self.setState({ comp: c }); },
+      addComp: function () {
+        var st = self.st(); var c = st.comp; if (!c.event && !c.score && !c.date) return;
+        self.setState({ comps: [Object.assign({}, c)].concat(st.comps), comp: {} });
+      }
+    };
+  }
+}
+</script>
+</body>
+</html>

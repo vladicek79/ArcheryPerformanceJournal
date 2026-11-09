@@ -1,0 +1,22 @@
+{
+  "name": "archery-performance-journal",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local-first PWA for logging archery training arrow by arrow, graded on mental program (M) and shooting cycle (S).",
+  "type": "module",
+  "scripts": {
+    "start": "npx --yes serve public -l 8080",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "icons": "node scripts/make-icons.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.17.0",
+    "eslint": "^9.17.0",
+    "globals": "^15.14.0",
+    "prettier": "^3.4.2",
+    "vitest": "^2.1.8"
+  }
+}
