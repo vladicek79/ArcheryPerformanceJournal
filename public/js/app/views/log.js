@@ -215,7 +215,13 @@ function renderActive(ctx, session) {
           icons.forward(),
         ),
       ),
-      h('div', { class: 'end-totals' }, undoBtn),
+      h(
+        'div',
+        { class: 'end-totals' },
+        // setup info that used to sit in the (now hidden) top bar
+        h('span', { class: 'end-setup muted' }, `${session.distance} m · ${faceLabel(session.face)}`),
+        undoBtn,
+      ),
     ),
     input,
     grades,

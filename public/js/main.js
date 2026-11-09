@@ -87,6 +87,8 @@ function renderNow({ scrollTop = false } = {}) {
   // header + tabs
   const subs = { log: logSubtitle(repo), new: T.sub.new, history: T.sub.history, gear: T.sub.gear, sights: T.sub.sights, settings: T.sub.settings };
   shell.sub.textContent = subs[route.name] || '';
+  // The top bar (title, Grades, Settings) is shown only on the Dashboard tab, to save space elsewhere.
+  shell.header.hidden = route.name !== 'new';
   for (const [name, el] of Object.entries(shell.tabButtons)) {
     if (name === route.name) el.setAttribute('aria-current', 'page');
     else el.removeAttribute('aria-current');

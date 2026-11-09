@@ -1869,3 +1869,27 @@ button.saved-end {
 .aim-row .slots {
   align-self: start;
 }
+
+/* top bar only on the Dashboard tab */
+.app-header[hidden] {
+  display: none;
+}
+
+.end-setup {
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.end-head .end-totals {
+  min-width: 0;
+  gap: 8px;
+}
+
+/* no top bar on the Log page: 60px more height for the target */
+.aim-row .target-stage {
+  width: min(100%, 560px, max(230px, calc(100dvh - 470px)));
+}
