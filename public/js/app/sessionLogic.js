@@ -67,7 +67,7 @@ function withShown(session, fn) {
  * - Otherwise it fills the selected empty slot, or the first empty one. A full end ignores input.
  * The arrow that received the score stays selected so it can be graded right away.
  */
-export function enterScore(session, v, x = null, y = null) {
+export function enterScore(session, v, x = null, y = null, spot = null) {
   const arrows = shownEnd(session).arrows;
   let cur = session.cursor;
   if (!session.pinned && arrows[cur].v != null) {
@@ -75,7 +75,9 @@ export function enterScore(session, v, x = null, y = null) {
     if (cur < 0) return session;
   }
   return withShown(session, (end, s) => {
-    end.arrows[cur] = { ...end.arrows[cur], v, x: x ?? null, y: y ?? null };
+    const { spot: _old, ...rest } = end.arrows[cur];
+    // `spot` (which spot of a three-spot sheet) is only stored when known
+    end.arrows[cur] = { ...rest, v, x: x ?? null, y: y ?? null, ...(spot != null && x != null ? { spot } : {}) };
     s.cursor = cur;
     s.pinned = false;
   });

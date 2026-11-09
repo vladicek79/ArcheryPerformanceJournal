@@ -2,7 +2,7 @@
 
 export function parseHash(hash) {
   const parts = hash.replace(/^#\/?/, '').split('/').filter(Boolean).map(decodeURIComponent);
-  return { name: parts[0] || 'log', params: parts.slice(1) };
+  return { name: parts[0] || 'new', params: parts.slice(1) };
 }
 
 export function createRouter(onChange) {

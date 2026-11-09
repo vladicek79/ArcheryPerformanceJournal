@@ -235,3 +235,30 @@ describe('performance review', () => {
     expect(collections.sessions.validate({ ...finished(), review: 'x' })).toContain('invalid review');
   });
 });
+
+describe('arrows per end', () => {
+  const s = (n) => ({ ...L.createSession({ date: '2026-11-09', distance: 18, face: '40s', arrowsPerEnd: n }), id: 'a' });
+  it('accepts 1 to 12 arrows per end', () => {
+    for (const n of [1, 3, 7, 12]) expect(collections.sessions.validate(s(n))).toEqual([]);
+  });
+  it('rejects 0 and more than 12', () => {
+    for (const n of [0, 13, 2.5]) expect(collections.sessions.validate(s(n)).join()).toMatch(/arrows per end/);
+  });
+});
+
+describe('three-spot sheets', () => {
+  const s = () => L.createSession({ date: '2026-11-09', distance: 18, face: '40t', arrowsPerEnd: 3 });
+  it('stores the spot with the arrow and validates it', () => {
+    const t = L.enterScore(s(), 10, 0.1, 0.2, 2);
+    expect(t.current.arrows[0]).toMatchObject({ v: 10, x: 0.1, y: 0.2, spot: 2 });
+    expect(collections.sessions.validate({ ...t, id: 'a' })).toEqual([]);
+  });
+  it('drops the spot when the score has no position', () => {
+    const t = L.enterScore(L.enterScore(s(), 10, 0.1, 0.2, 2), 'M');
+    expect(t.current.arrows[1].spot).toBeUndefined();
+  });
+  it('rejects an unknown spot', () => {
+    const t = L.enterScore(s(), 10, 0.1, 0.2, 5);
+    expect(collections.sessions.validate({ ...t, id: 'a' }).join()).toMatch(/invalid spot/);
+  });
+});

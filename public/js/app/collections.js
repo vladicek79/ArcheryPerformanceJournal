@@ -1,5 +1,5 @@
 // What the app stores (ARCHITECTURE §6.4). The repository validates before every save and on import.
-import { FACE_IDS, ARROWS_PER_END, isValidArrowValue } from './scoring.js';
+import { FACE_IDS, ARROWS_PER_END_MAX, isValidArrowsPerEnd, isValidArrowValue } from './scoring.js';
 
 const isStr = (v) => typeof v === 'string';
 const isGrade = (g) => g == null || (Number.isInteger(g) && g >= 1 && g <= 5);
@@ -15,6 +15,7 @@ function validateArrow(a, where, requireValue) {
   if (!isGrade(a.m)) errs.push(`${where}: invalid M grade`);
   if (!isGrade(a.s)) errs.push(`${where}: invalid S grade`);
   if (!isUnit(a.x) || !isUnit(a.y)) errs.push(`${where}: invalid position`);
+  if (a.spot != null && !(Number.isInteger(a.spot) && a.spot >= 0 && a.spot <= 2)) errs.push(`${where}: invalid spot`);
   return errs;
 }
 
@@ -37,7 +38,7 @@ export const collections = {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(r.date || '')) errs.push('date must be YYYY-MM-DD');
       if (!(Number.isFinite(r.distance) && r.distance > 0)) errs.push('invalid distance');
       if (!FACE_IDS.includes(r.face)) errs.push('invalid face');
-      if (!ARROWS_PER_END.includes(r.arrowsPerEnd)) errs.push('arrows per end must be 3 or 6');
+      if (!isValidArrowsPerEnd(r.arrowsPerEnd)) errs.push(`arrows per end must be 1 to ${ARROWS_PER_END_MAX}`);
       if (!['active', 'finished'].includes(r.status)) errs.push('invalid status');
       if (r.review != null && (typeof r.review !== 'object' || !isStr(r.review.good ?? '') || !isStr(r.review.workOn ?? ''))) errs.push('invalid review');
       if (!Array.isArray(r.ends)) errs.push('ends must be a list');
@@ -84,7 +85,7 @@ export const defaultSettings = {
   askGrades: true,
   gear: {},
   activeSnapshotId: null,
-  lastSetup: { distance: 70, face: '122', arrowsPerEnd: 6 },
+  lastSetup: { distance: 18, face: '40t', arrowsPerEnd: 3 },
   sightsSeeded: false,
 };
 

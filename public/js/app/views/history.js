@@ -1,11 +1,11 @@
 // History tab: training log list → session detail (HANDOFF §6).
 import { h, s, formatDate } from '../../core/dom.js';
-import { faceLabel } from '../scoring.js';
+import { faceLabel, sheetPoint, isMultiSpot, spotCentres } from '../scoring.js';
 import { computeStats, sumArrows, fmt } from '../stats.js';
 import { T } from '../strings.js';
 import { icons } from '../icons.js';
 import { card } from './common.js';
-import { VB, faceRings } from './face.js';
+import { VB, faceRings, faceSheet, faceViewBox } from './face.js';
 
 const finished = (repo) =>
   repo.list('sessions', {
@@ -202,8 +202,32 @@ function sessionGroup(ss) {
   const all = ss.ends.flatMap((e) => e.arrows).filter((a) => a.v != null);
   const placed = all.filter((a) => a.x != null && a.y != null);
   if (!placed.length) return null;
-  const cx = placed.reduce((t, a) => t + a.x, 0) / placed.length;
-  const cy = placed.reduce((t, a) => t + a.y, 0) / placed.length;
+  const multi = isMultiSpot(ss.face);
+  const mean = (g) => ({ x: g.reduce((t, a) => t + a.x, 0) / g.length, y: g.reduce((t, a) => t + a.y, 0) / g.length, spot: g[0].spot ?? 0 });
+  // group centre per spot on a three-spot sheet, one for the whole face otherwise
+  const centres = spotCentres(ss.face)
+    .map((_, i) => placed.filter((a) => !multi || (a.spot ?? 0) === i))
+    .filter((g) => g.length)
+    .map((g) => sheetPoint(mean(g), ss.face));
+
+  const sheet = groupFace({
+    viewBox: faceViewBox(ss.face),
+    face: faceSheet(ss.face),
+    points: placed.map((a) => sheetPoint(a, ss.face)),
+    centres,
+    label: `Target face with ${placed.length} arrows of this session`,
+  });
+  // three-spot sheets also get every arrow on one spot, to see the overall group
+  const combined = multi
+    ? groupFace({
+        viewBox: `${-VB} ${-VB} ${VB * 2} ${VB * 2}`,
+        face: faceRings(ss.face),
+        points: placed.map((a) => ({ x: a.x * 100, y: a.y * 100 })),
+        centres: [(({ x, y }) => ({ x: x * 100, y: y * 100 }))(mean(placed))],
+        label: `All ${placed.length} arrows on one spot`,
+      })
+    : null;
+
   return card(
     { 'aria-labelledby': 'group-title' },
     h(
@@ -212,27 +236,35 @@ function sessionGroup(ss) {
       h('h2', { class: 'card-title', id: 'group-title' }, 'Group'),
       h('span', { class: 'muted small' }, `${placed.length} of ${all.length} arrows placed on the face`),
     ),
-    h(
-      'div',
-      { class: 'group-face' },
-      s(
-        'svg',
-        {
-          viewBox: `${-VB} ${-VB} ${VB * 2} ${VB * 2}`,
-          role: 'img',
-          'aria-label': `Target face with ${placed.length} arrows of this session`,
-        },
-        faceRings(ss.face),
-        placed.map((a) => s('circle', { cx: a.x * 100, cy: a.y * 100, r: 3.4, fill: 'rgba(20,24,28,0.75)', stroke: '#FFFFFF', 'stroke-width': 1.1 })),
-        // group centre
+    multi
+      ? h(
+          'div',
+          { class: 'group-faces' },
+          h('figure', null, sheet, h('figcaption', { class: 'muted small' }, 'By spot')),
+          h('figure', null, combined, h('figcaption', { class: 'muted small' }, 'All spots together')),
+        )
+      : sheet,
+  );
+}
+
+/** One face drawing with arrow dots and group-centre marks (SVG units, spot radius = 100). */
+function groupFace({ viewBox, face, points, centres, label }) {
+  return h(
+    'div',
+    { class: 'group-face' },
+    s(
+      'svg',
+      { viewBox, role: 'img', 'aria-label': label },
+      face,
+      points.map((p) => s('circle', { cx: p.x, cy: p.y, r: 3.4, fill: 'rgba(20,24,28,0.75)', stroke: '#FFFFFF', 'stroke-width': 1.1 })),
+      centres.map((c) =>
         s(
           'g',
-          { transform: `translate(${cx * 100} ${cy * 100})` },
+          { transform: `translate(${c.x} ${c.y})` },
           s('circle', { r: 4.5, fill: 'none', stroke: '#E5007E', 'stroke-width': 1.6 }),
           s('path', { d: 'M-8 0h16M0 -8v16', stroke: '#E5007E', 'stroke-width': 1.6, 'stroke-linecap': 'round' }),
         ),
       ),
     ),
-    h('p', { class: 'muted small group-legend' }, h('span', { class: 'mpi-mark', 'aria-hidden': 'true' }), 'Group centre (average of all placed arrows)'),
   );
 }

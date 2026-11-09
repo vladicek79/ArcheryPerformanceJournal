@@ -2019,3 +2019,103 @@ button.saved-end {
 .setup-card .chip-sub {
   font-size: 13px;
 }
+
+/* banners inside a page run edge to edge like the cards */
+.main .banner {
+  margin-left: -16px;
+  margin-right: -16px;
+  border-radius: 0;
+  border-left: 0;
+  border-right: 0;
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+.setup-card .btn-xl {
+  margin-top: 4px;
+}
+
+.setup-card .stepper output {
+  font-size: 17px;
+}
+
+.setup-card .stepper button:disabled {
+  opacity: 0.3;
+}
+
+/* more than 6 arrows per end: arrow list in two columns so the target keeps its size */
+.aim-row.aim-row-wide {
+  grid-template-columns: 104px minmax(0, 1fr);
+}
+
+.aim-row .slots.slots-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(6, auto);
+  column-gap: 0;
+}
+
+/* three-spot sheets (triple, Vegas): not round, and never taller than the screen */
+.target-btn.target-sheet {
+  border-radius: 8px;
+}
+
+.group-face svg {
+  max-height: 480px;
+}
+
+/* three-spot sheets: the sheet, with all arrows on one spot under it */
+.group-faces {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+
+.group-faces figure {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.group-faces .group-face {
+  width: min(100%, 360px);
+}
+
+.group-faces .group-face svg {
+  max-height: 360px;
+}
+
+/* session stats tiles sit in an edge-to-edge band like the cards */
+.main .tiles {
+  margin-left: -16px;
+  margin-right: -16px;
+  padding: 14px 16px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.main .tile {
+  background: var(--ground);
+  box-shadow: none;
+}
+
+@media (min-width: 600px) {
+  .main .tiles,
+  .main .banner {
+    margin-left: -24px;
+    margin-right: -24px;
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+}
+
+.main .tiles {
+  max-width: none;
+}
+
+.main .banner {
+  max-width: none;
+}

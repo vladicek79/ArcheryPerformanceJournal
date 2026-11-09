@@ -2,11 +2,16 @@
 import { h, s, todayIso } from '../../core/dom.js';
 import {
   DISTANCES,
-  FACE_IDS,
-  ARROWS_PER_END,
+  SETUP_FACES,
+  ARROWS_PER_END_MIN,
+  ARROWS_PER_END_MAX,
+  DEFAULT_ARROWS_PER_END,
   DISTANCE_DEFAULTS,
   faceLabel,
   scoreFromPoint,
+  locateOnSheet,
+  sheetPoint,
+  isMultiSpot,
   zoneOf,
 } from '../scoring.js';
 import { sumArrows, computeStats, fmt } from '../stats.js';
@@ -14,7 +19,7 @@ import * as L from '../sessionLogic.js';
 import { T } from '../strings.js';
 import { icons } from '../icons.js';
 import { card, chip, sectionLabel } from './common.js';
-import { VB, faceRings } from './face.js';
+import { faceSheet, faceViewBox } from './face.js';
 
 export function findActive(repo) {
   return repo.list('sessions', { filter: (x) => x.status === 'active' })[0] || null;
@@ -48,8 +53,13 @@ function update(ctx, fn, { rerender = true } = {}) {
 
 function renderSetup(ctx, active = null) {
   const settings = ctx.repo.getSettings();
-  const setup = ctx.ui.get().setup || settings.lastSetup;
+  // distance and face are remembered from the last session; arrows per end always start at the default
+  const last = settings.lastSetup;
+  // a face no longer offered (the single 40 cm 10–6 spot) falls back to the triple
+  const setup = ctx.ui.get().setup || { ...last, face: SETUP_FACES.includes(last.face) ? last.face : '40t', arrowsPerEnd: DEFAULT_ARROWS_PER_END };
   const set = (patch) => ctx.ui.set({ setup: { ...setup, ...patch } });
+  // a remembered distance that is not in the list (e.g. 90 m) steps from the nearest listed one
+  const distIndex = DISTANCES.reduce((best, d, i) => (Math.abs(d - setup.distance) < Math.abs(DISTANCES[best] - setup.distance) ? i : best), 0);
 
   const start = () => {
     // Only one session runs at a time: an in-progress session is finished (saved ends kept) or,
@@ -91,13 +101,17 @@ function renderSetup(ctx, active = null) {
           'section',
           { class: 'setup-section', 'aria-labelledby': 'lbl-dist' },
           sectionLabel(T.distance, 'lbl-dist'),
-          h(
-            'div',
-            { class: 'grid-4' },
-            DISTANCES.map((d) =>
-              chip({ label: `${d} m`, pressed: setup.distance === d, fk: `dist-${d}`, onClick: () => set({ distance: d, ...DISTANCE_DEFAULTS[d] }) }),
-            ),
-          ),
+          stepper({
+            label: 'distance',
+            value: `${setup.distance} m`,
+            canDown: distIndex > 0,
+            canUp: distIndex < DISTANCES.length - 1,
+            fk: 'dist',
+            onStep: (dir) => {
+              const d = DISTANCES[distIndex + dir];
+              set({ distance: d, ...DISTANCE_DEFAULTS[d] });
+            },
+          }),
         ),
         h(
           'section',
@@ -106,31 +120,37 @@ function renderSetup(ctx, active = null) {
           h(
             'div',
             { class: 'grid-3' },
-            FACE_IDS.map((f) => chip({ label: faceLabel(f), pressed: setup.face === f, fk: `face-${f}`, onClick: () => set({ face: f }) })),
+            SETUP_FACES.map((f) => chip({ label: faceLabel(f), pressed: setup.face === f, fk: `face-${f}`, onClick: () => set({ face: f }) })),
           ),
         ),
         h(
           'section',
           { class: 'setup-section', 'aria-labelledby': 'lbl-n' },
           sectionLabel(T.arrowsPerEnd, 'lbl-n'),
-          h(
-            'div',
-            { class: 'grid-2' },
-            ARROWS_PER_END.map((n) =>
-              chip({
-                label: `${n} arrows`,
-                sub: n === 3 ? T.indoorStyle : T.outdoorStyle,
-                pressed: setup.arrowsPerEnd === n,
-                fk: `n-${n}`,
-                onClick: () => set({ arrowsPerEnd: n }),
-              }),
-            ),
-          ),
+          stepper({
+            label: 'arrows',
+            value: `${setup.arrowsPerEnd} arrows`,
+            canDown: setup.arrowsPerEnd > ARROWS_PER_END_MIN,
+            canUp: setup.arrowsPerEnd < ARROWS_PER_END_MAX,
+            fk: 'n',
+            onStep: (dir) => set({ arrowsPerEnd: setup.arrowsPerEnd + dir }),
+          }),
         ),
+        h('button', { type: 'button', class: 'btn btn-primary btn-xl', onClick: start }, T.start),
       ),
-      h('button', { type: 'button', class: 'btn btn-primary btn-xl', onClick: start }, T.start(setup.distance, faceLabel(setup.face))),
     ),
   };
+}
+
+/** − value + control for the setup card. */
+function stepper({ label, value, canDown, canUp, fk, onStep }) {
+  return h(
+    'div',
+    { class: 'stepper', role: 'group' },
+    h('button', { type: 'button', 'aria-label': `Less ${label}`, disabled: !canDown, dataset: { fk: `${fk}-minus` }, onClick: () => onStep(-1) }, '−'),
+    h('output', { 'aria-live': 'polite' }, value),
+    h('button', { type: 'button', 'aria-label': `More ${label}`, disabled: !canUp, dataset: { fk: `${fk}-plus` }, onClick: () => onStep(1) }, '+'),
+  );
 }
 
 // ---------------------------------------------------------------- active session
@@ -140,7 +160,7 @@ function renderActive(ctx, session) {
   const current = L.shownEnd(session); // the end on screen (the current one or a saved one)
   const viewing = session.view != null;
   const editing = L.isEditing(session);
-  const enter = (v, x, y) => update(ctx, (cur) => L.enterScore(cur, v, x, y));
+  const enter = (v, x, y, spot) => update(ctx, (cur) => L.enterScore(cur, v, x, y, spot));
 
   const endNo = L.viewIndex(session) + 1;
   const totalEnds = session.ends.length + 1;
@@ -149,7 +169,7 @@ function renderActive(ctx, session) {
   // --- slots
   const slots = h(
     'div',
-    { class: 'slots', role: 'group', 'aria-label': 'Arrows in this end' },
+    { class: ['slots', current.arrows.length > 6 && 'slots-2col'], role: 'group', 'aria-label': 'Arrows in this end' },
     current.arrows.map((a, i) => {
       const active = i === cursor;
       return h(
@@ -344,15 +364,16 @@ function findSightMark(repo, distance) {
 const LOUPE_SPAN = 24; // viewBox units shown in the magnifier (the face is 202 wide → ~3× zoom)
 
 function arrowDots(session) {
+  const at = (a) => sheetPoint(a, session.face);
   const prev = L.otherEnds(session).flatMap((e) => e.arrows).filter((a) => a.x != null);
   const cur = L.shownEnd(session).arrows.map((a, i) => ({ a, i })).filter(({ a }) => a.x != null);
   const movingIdx = L.isEditing(session) ? session.cursor : -1;
   return [
-    ...prev.map((a) => s('circle', { cx: a.x * 100, cy: a.y * 100, r: 3.2, fill: 'rgba(20,24,28,0.6)', stroke: '#FFFFFF', 'stroke-width': 1.2 })),
+    ...prev.map((a) => s('circle', { cx: at(a).x, cy: at(a).y, r: 3.2, fill: 'rgba(20,24,28,0.6)', stroke: '#FFFFFF', 'stroke-width': 1.2 })),
     ...cur.map(({ a, i }) =>
       s(
         'g',
-        { transform: `translate(${a.x * 100} ${a.y * 100})`, opacity: i === movingIdx ? 0.55 : null },
+        { transform: `translate(${at(a).x} ${at(a).y})`, opacity: i === movingIdx ? 0.55 : null },
         // the arrow being moved gets a dashed ring so you can see which one will change
         i === movingIdx ? s('circle', { r: 10, fill: 'none', stroke: '#E5007E', 'stroke-width': 1.4, 'stroke-dasharray': '2.5 2' }) : null,
         s('circle', { r: 6.4, fill: '#E5007E', stroke: '#FFFFFF', 'stroke-width': 1.3 }),
@@ -375,26 +396,30 @@ function targetInput(session, enter, slots) {
     s('circle', { r: 1.1, fill: '#E5007E', stroke: '#FFFFFF', 'stroke-width': 0.4 }),
     s('path', { d: 'M-4 0h2.4M1.6 0h2.4M0 -4v2.4M0 1.6v2.4', stroke: '#E5007E', 'stroke-width': 0.45, 'stroke-linecap': 'round' }),
   );
-  const loupeSvg = s('svg', { 'aria-hidden': 'true', focusable: 'false' }, faceRings(session.face), arrowDots(session), marker);
+  const loupeSvg = s('svg', { 'aria-hidden': 'true', focusable: 'false' }, faceSheet(session.face), arrowDots(session), marker);
   const loupeScore = h('span', { class: 'score-chip loupe-score' });
   const loupe = h('div', { class: 'loupe', 'aria-hidden': 'true', hidden: true }, loupeSvg, loupeScore);
 
-  let active = null; // { id, x, y }
+  let active = null; // { id, p } with p in sheet coordinates (one spot's radius = 1)
+  const sheet = s('svg', { viewBox: faceViewBox(session.face), 'aria-hidden': 'true', focusable: 'false' }, faceSheet(session.face), arrowDots(session));
   const btn = h(
     'button',
     {
       type: 'button',
-      class: 'target-btn',
+      class: ['target-btn', isMultiSpot(session.face) && 'target-sheet'],
       'aria-label': 'Target face: touch where the arrow landed, slide to fine-tune, release to score (keyboard users: use Keypad)',
     },
-    s('svg', { viewBox: `${-VB} ${-VB} ${VB * 2} ${VB * 2}`, 'aria-hidden': 'true', focusable: 'false' }, faceRings(session.face), arrowDots(session)),
+    sheet,
   );
 
   const toFace = (ev) => {
     const r = btn.getBoundingClientRect();
+    // screen → SVG units (the sheet may be letterboxed inside the square button)
+    const m = sheet.getScreenCTM()?.inverse();
+    const pt = m ? new DOMPoint(ev.clientX, ev.clientY).matrixTransform(m) : { x: 0, y: 0 };
     return {
-      x: (((ev.clientX - r.left) / r.width) * 2 * VB - VB) / 100,
-      y: (((ev.clientY - r.top) / r.height) * 2 * VB - VB) / 100,
+      x: pt.x / 100,
+      y: pt.y / 100,
       // finger position inside the stage, used to keep the loupe out from under the finger
       px: ev.clientX - r.left,
       py: ev.clientY - r.top,
@@ -427,7 +452,8 @@ function targetInput(session, enter, slots) {
     const cy = p.y * 100;
     loupeSvg.setAttribute('viewBox', `${cx - LOUPE_SPAN / 2} ${cy - LOUPE_SPAN / 2} ${LOUPE_SPAN} ${LOUPE_SPAN}`);
     marker.setAttribute('transform', `translate(${cx} ${cy})`);
-    const v = scoreFromPoint(p.x, p.y, session.face);
+    const hit = locateOnSheet(p.x, p.y, session.face);
+    const v = scoreFromPoint(hit.x, hit.y, session.face);
     loupeScore.textContent = String(v);
     loupeScore.className = `score-chip loupe-score z-${zoneOf(v)}`;
     loupe.hidden = false;
@@ -441,8 +467,9 @@ function targetInput(session, enter, slots) {
     loupe.hidden = true;
     btn.classList.remove('aiming');
     if (!commit) return;
-    const keep = Math.hypot(p.x, p.y) < 1.05;
-    enter(scoreFromPoint(p.x, p.y, session.face), keep ? round3(p.x) : null, keep ? round3(p.y) : null);
+    const hit = locateOnSheet(p.x, p.y, session.face);
+    const keep = Math.hypot(hit.x, hit.y) < 1.05;
+    enter(scoreFromPoint(hit.x, hit.y, session.face), keep ? round3(hit.x) : null, keep ? round3(hit.y) : null, hit.spot);
   };
 
   btn.addEventListener('pointerdown', (ev) => {
@@ -470,7 +497,7 @@ function targetInput(session, enter, slots) {
     'div',
     { class: 'target-wrap' },
     // arrow slots in a column on the left, target face on the right
-    h('div', { class: 'aim-row' }, slots, h('div', { class: 'target-stage' }, btn, loupe)),
+    h('div', { class: ['aim-row', session.arrowsPerEnd > 6 && 'aim-row-wide'] }, slots, h('div', { class: 'target-stage' }, btn, loupe)),
     h(
       'div',
       { class: 'quick-keys', role: 'group', 'aria-label': 'Quick score without position' },

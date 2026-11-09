@@ -81,7 +81,7 @@ const TABS = [
 ];
 const VIEWS = { log: renderLog, new: renderNewSession, history: renderHistory, gear: renderGear, sights: renderSights, settings: renderSettings };
 
-let route = { name: 'log', params: [] };
+let route = { name: 'new', params: [] };
 let shell;
 let overlayClose = null;
 let lastOverlayKey = null;
@@ -121,7 +121,7 @@ function buildShell() {
 
 function renderNow({ scrollTop = false } = {}) {
   const focusKey = document.activeElement?.dataset?.fk;
-  const view = VIEWS[route.name] || renderLog;
+  const view = VIEWS[route.name] || renderNewSession;
   let result;
   try {
     result = view(ctx, route.params);

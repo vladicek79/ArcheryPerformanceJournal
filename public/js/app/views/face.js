@@ -1,6 +1,6 @@
 // Target face drawing shared by the Log tab and the session detail (SVG, face radius = 100 units).
 import { s } from '../../core/dom.js';
-import { isSpotFace } from '../scoring.js';
+import { isSpotFace, isMultiSpot, spotCentres } from '../scoring.js';
 
 export const VB = 101; // viewBox half-size; the face radius is 100
 
@@ -25,3 +25,19 @@ export function faceRings(face) {
   ];
 }
 
+
+/** The whole sheet: one face, or three spots for the triple and Vegas faces. */
+export function faceSheet(face) {
+  if (!isMultiSpot(face)) return faceRings(face);
+  return spotCentres(face).map(([cx, cy]) => s('g', { transform: `translate(${cx} ${cy})` }, faceRings(face)));
+}
+
+/** viewBox that fits the sheet with a 1-unit margin. */
+export function faceViewBox(face) {
+  const c = spotCentres(face);
+  const xs = c.map(([x]) => x);
+  const ys = c.map(([, y]) => y);
+  const minX = Math.min(...xs) - VB;
+  const minY = Math.min(...ys) - VB;
+  return `${minX} ${minY} ${Math.max(...xs) + VB - minX} ${Math.max(...ys) + VB - minY}`;
+}

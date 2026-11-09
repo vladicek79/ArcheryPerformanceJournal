@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { scoreFromPoint, arrowValue, keypadValues, zoneOf, DISTANCE_DEFAULTS } from '../public/js/app/scoring.js';
+import { scoreFromPoint, arrowValue, keypadValues, zoneOf, DISTANCE_DEFAULTS, locateOnSheet, sheetPoint } from '../public/js/app/scoring.js';
 
 describe('scoreFromPoint – full face', () => {
   const f = '122';
@@ -63,7 +63,35 @@ describe('helpers', () => {
     ]);
   });
   it('distance defaults', () => {
-    expect(DISTANCE_DEFAULTS[18]).toEqual({ face: '40s', arrowsPerEnd: 3 });
-    expect(DISTANCE_DEFAULTS[70]).toEqual({ face: '122', arrowsPerEnd: 6 });
+    expect(DISTANCE_DEFAULTS[18]).toEqual({ face: '40t' });
+    expect(DISTANCE_DEFAULTS[70]).toEqual({ face: '122' });
+  });
+});
+
+describe('three-spot sheets', () => {
+  it('finds the nearest spot and the position relative to its centre', () => {
+    const top = locateOnSheet(0.05, -2.2, '40t');
+    expect(top.spot).toBe(0);
+    expect(top.x).toBeCloseTo(0.05);
+    expect(top.y).toBeCloseTo(0);
+    expect(locateOnSheet(0, 0.3, '40t').spot).toBe(1);
+    expect(locateOnSheet(0, 2.5, '40t').spot).toBe(2);
+    expect(locateOnSheet(-1.1, 0.63, '40v')).toMatchObject({ spot: 1 });
+    expect(locateOnSheet(1.2, 0.6, '40v').spot).toBe(2);
+  });
+
+  it('keeps single faces without a spot', () => {
+    expect(locateOnSheet(0.2, 0.1, '122')).toEqual({ spot: null, x: 0.2, y: 0.1 });
+  });
+
+  it('scores each spot like a 40 cm 10–6 face', () => {
+    const hit = locateOnSheet(0, -2.2 + 0.5, '40t');
+    expect(scoreFromPoint(hit.x, hit.y, '40t')).toBe(8);
+    expect(keypadValues('40v')).toEqual(['X', 10, 9, 8, 7, 6, 'M']);
+  });
+
+  it('places a logged arrow back on its spot', () => {
+    expect(sheetPoint({ x: 0.1, y: 0, spot: 2 }, '40v')).toEqual({ x: 120, y: 63 });
+    expect(sheetPoint({ x: 0.1, y: 0.2 }, '122')).toEqual({ x: 10, y: 20 });
   });
 });
