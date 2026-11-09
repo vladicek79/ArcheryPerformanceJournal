@@ -187,7 +187,7 @@ function renderActive(ctx, session) {
   });
 
   const endCard = card(
-    { 'aria-label': `End ${endNo}` },
+    { class: 'card-bleed', 'aria-label': `End ${endNo}` },
     h(
       'div',
       { class: 'end-head' },

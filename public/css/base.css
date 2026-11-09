@@ -1792,3 +1792,25 @@ button.saved-end {
   gap: 2px;
   padding: 2px 0;
 }
+
+/* scoring card runs edge to edge like the header bar */
+.card-bleed {
+  margin-left: -16px;
+  margin-right: -16px;
+  max-width: none;
+  border-radius: 0;
+  padding: 12px;
+}
+
+@media (min-width: 600px) {
+  .card-bleed {
+    margin-left: -24px;
+    margin-right: -24px;
+    padding: 14px 24px;
+  }
+}
+
+/* with the extra width the target can grow; height still keeps the whole end on one screen */
+.aim-row .target-stage {
+  width: min(100%, 560px, max(230px, calc(100dvh - 530px)));
+}
