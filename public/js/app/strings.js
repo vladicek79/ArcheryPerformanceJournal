@@ -55,7 +55,6 @@ export const T = {
   prevEnd: 'Previous end',
   nextEnd: 'Next end',
   saveAndNext: 'Save this end and start the next',
-  saved: 'saved',
   finish: 'Finish session',
   discardSession: 'Discard session',
   confirmDiscard: 'Discard this session and all its ends? This cannot be undone.',

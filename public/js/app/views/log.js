@@ -197,7 +197,7 @@ function renderActive(ctx, session) {
           'h2',
           { class: 'end-title' },
           `${T.end} ${endNo}`,
-          h('span', { class: 'end-of muted' }, viewing ? ` / ${totalEnds} · ${T.saved}` : totalEnds > 1 ? ` / ${totalEnds}` : ''),
+          h('span', { class: 'end-of muted' }, totalEnds > 1 ? ` / ${totalEnds}` : ''),
         ),
         h(
           'button',
@@ -215,8 +215,6 @@ function renderActive(ctx, session) {
       h(
         'div',
         { class: 'end-totals' },
-        // setup info that used to sit in the (now hidden) top bar
-        h('span', { class: 'end-setup muted' }, `${session.distance} m · ${faceLabel(session.face)}`),
         undoBtn,
       ),
     ),
