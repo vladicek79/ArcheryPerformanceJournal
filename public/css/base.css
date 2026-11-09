@@ -1627,3 +1627,40 @@ textarea {
 .target-stage {
   width: min(100%, 340px, max(230px, calc(100dvh - 530px)));
 }
+
+/* ---------------------------------------------------------------- arrow slots as a column left of the target */
+.aim-row {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+}
+
+.aim-row .slots {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-self: center;
+}
+
+.aim-row .slot {
+  min-height: 0;
+  padding: 3px 0;
+  gap: 1px;
+}
+
+.aim-row .slot .score-chip {
+  width: 36px;
+  height: 36px;
+  font-size: 15px;
+}
+
+.aim-row .slot-grades {
+  font-size: 10px;
+}
+
+.aim-row .target-stage {
+  justify-self: center;
+  width: min(100%, 340px, max(230px, calc(100dvh - 460px)));
+}

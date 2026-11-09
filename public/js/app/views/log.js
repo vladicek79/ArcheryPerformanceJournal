@@ -111,7 +111,7 @@ function renderSetup(ctx) {
 // ---------------------------------------------------------------- active session
 
 function renderActive(ctx, session) {
-  const { current, cursor, arrowsPerEnd: n } = session;
+  const { current, cursor } = session;
   const editing = L.isEditing(session);
   const enter = (v, x, y) => update(ctx, (cur) => L.enterScore(cur, v, x, y));
 
@@ -123,7 +123,7 @@ function renderActive(ctx, session) {
   // --- slots
   const slots = h(
     'div',
-    { class: 'slots', style: { gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))` } },
+    { class: 'slots', role: 'group', 'aria-label': 'Arrows in this end' },
     current.arrows.map((a, i) => {
       const active = i === cursor;
       return h(
@@ -148,7 +148,7 @@ function renderActive(ctx, session) {
     icons.undo(),
   );
 
-  const input = targetInput(session, enter);
+  const input = targetInput(session, enter, slots);
 
   // Edit mode (an existing arrow tapped): the next target touch / key replaces it; Delete / Done in the grades header.
   const grades = gradePanel(session, {
@@ -171,7 +171,6 @@ function renderActive(ctx, session) {
         undoBtn,
       ),
     ),
-    slots,
     input,
     grades,
   );
@@ -327,7 +326,7 @@ function arrowDots(session) {
  * Target face input. Touch (or press) shows a magnifier with the exact hit point and its score;
  * moving the finger fine-tunes the position; releasing registers the arrow. Cancel = no arrow.
  */
-function targetInput(session, enter) {
+function targetInput(session, enter, slots) {
   // magnifier: zoomed copy of the face centred on the finger, with a crosshair and the live score
   const marker = s(
     'g',
@@ -429,7 +428,8 @@ function targetInput(session, enter) {
   return h(
     'div',
     { class: 'target-wrap' },
-    h('div', { class: 'target-stage' }, btn, loupe),
+    // arrow slots in a column on the left, target face on the right
+    h('div', { class: 'aim-row' }, slots, h('div', { class: 'target-stage' }, btn, loupe)),
     h(
       'div',
       { class: 'quick-keys', role: 'group', 'aria-label': 'Quick score without position' },

@@ -41,7 +41,7 @@ export const T = {
   total: 'Total',
   undo: 'Undo last arrow',
   miss: 'Miss (M)',
-  hint: 'Touch the target or a score key, then tap M and S. Tap an arrow above to move, regrade or delete it.',
+  hint: 'Touch the target or a score key, then tap M and S. Tap an arrow on the left to move, regrade or delete it.',
   editingArrow: (n) => `Editing arrow ${n}`,
   editHint: 'Touch the target or a score key to change it, or set new grades.',
   done: 'Done',
