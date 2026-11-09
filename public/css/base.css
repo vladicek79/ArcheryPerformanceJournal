@@ -1814,3 +1814,8 @@ button.saved-end {
 .aim-row .target-stage {
   width: min(100%, 560px, max(230px, calc(100dvh - 530px)));
 }
+
+/* ungraded: show nothing (space is kept so the column doesn't jump when a grade is added) */
+.mini-grade.empty {
+  visibility: hidden;
+}
