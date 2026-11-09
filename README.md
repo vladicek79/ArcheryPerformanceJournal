@@ -21,6 +21,7 @@ To test on an Android phone: connect over USB, open `chrome://inspect` on the PC
 | Tab | Purpose |
 |---|---|
 | **Log** | New session (distance, face, arrows/end with smart defaults) → arrow-by-arrow logging. Touch the target face (a magnifier shows the exact spot; release to score) or tap a quick key (X 10 9 8 7 6 M), then tap the M and S grade rows under the target (3 taps per arrow). Tap an arrow to move, regrade or delete it. Let-downs / correct let-downs and a note per end. The active session is saved on every tap and resumes after a reload. |
+| **Dashboard** | Progress across finished sessions (filter by distance): sessions, arrows, avg arrow, avg M, avg S, M1–2 %; avg arrow and avg M per session (tap a point to read it); avg arrow by mental grade; summary by distance. |
 | **History** | Training log list → session detail: Total, Avg arrow, 10s (X), Avg M, Avg S, M1–2 %, *avg arrow by mental grade*, and the ends table (`Date · End · Arrows · EndScore · Grade M · Grade S · Let-downs · Correct LD · Note`). |
 | **Gear** | Current equipment setup (bow, arrows, string, tuning, stabilisers & accessories) and named setup snapshots. A new session records the current gear and snapshot. |
 | **Sights** | Sight marks per distance (shown as a pill on the active session) and the competition log. |

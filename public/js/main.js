@@ -13,6 +13,7 @@ import { icons } from './app/icons.js';
 import { guideSheet } from './app/views/common.js';
 import { renderLog, logSubtitle } from './app/views/log.js';
 import { renderHistory } from './app/views/history.js';
+import { renderDashboard } from './app/views/dashboard.js';
 import { renderGear } from './app/views/gear.js';
 import { renderSights } from './app/views/sights.js';
 import { renderSettings } from './app/views/settings.js';
@@ -30,11 +31,12 @@ const ui = createState({ guide: false, toast: null, update: null });
 
 const TABS = [
   ['log', T.tabs.log, icons.log],
+  ['dashboard', T.tabs.dashboard, icons.dashboard],
   ['history', T.tabs.history, icons.history],
   ['gear', T.tabs.gear, icons.gear],
   ['sights', T.tabs.sights, icons.sights],
 ];
-const VIEWS = { log: renderLog, history: renderHistory, gear: renderGear, sights: renderSights, settings: renderSettings };
+const VIEWS = { log: renderLog, dashboard: renderDashboard, history: renderHistory, gear: renderGear, sights: renderSights, settings: renderSettings };
 
 let route = { name: 'log', params: [] };
 let shell;
@@ -84,7 +86,7 @@ function renderNow({ scrollTop = false } = {}) {
   }
 
   // header + tabs
-  const subs = { log: logSubtitle(repo), history: T.sub.history, gear: T.sub.gear, sights: T.sub.sights, settings: T.sub.settings };
+  const subs = { log: logSubtitle(repo), dashboard: T.sub.dashboard, history: T.sub.history, gear: T.sub.gear, sights: T.sub.sights, settings: T.sub.settings };
   shell.sub.textContent = subs[route.name] || '';
   for (const [name, el] of Object.entries(shell.tabButtons)) {
     if (name === route.name) el.setAttribute('aria-current', 'page');

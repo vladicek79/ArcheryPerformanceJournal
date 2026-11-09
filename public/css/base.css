@@ -1664,3 +1664,89 @@ textarea {
   justify-self: center;
   width: min(100%, 340px, max(230px, calc(100dvh - 460px)));
 }
+
+/* ---------------------------------------------------------------- dashboard */
+.tabbar {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.tab {
+  font-size: 11px;
+  min-width: 0;
+}
+
+.filter-row {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.filter-row .chip {
+  min-height: 40px;
+  padding: 0 14px;
+  font-size: 14px;
+  flex: none;
+}
+
+.chart {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.line-chart {
+  display: block;
+  width: 100%;
+  height: auto;
+  touch-action: pan-y;
+}
+
+.chart-grid {
+  stroke: var(--divider);
+  stroke-width: 1;
+}
+
+.chart-axis {
+  fill: var(--muted);
+  font-size: 10px;
+  font-family: var(--font-body);
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.chart-dot {
+  fill: var(--accent);
+  stroke: var(--surface);
+  stroke-width: 2;
+}
+
+.chart-dot.on {
+  r: 6;
+  fill: var(--ink);
+}
+
+.chart-hit {
+  fill: transparent;
+  cursor: pointer;
+}
+
+.chart-readout {
+  color: var(--muted);
+  min-height: 18px;
+}
+
+.chart-readout strong {
+  color: var(--ink);
+}
+
+.dist-table {
+  min-width: 420px;
+}
