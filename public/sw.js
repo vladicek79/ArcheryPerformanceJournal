@@ -56,7 +56,8 @@ self.addEventListener('message', (event) => {
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return;
-  if (VERSION === '__APP_VERSION__') {
+  // The deploy stamps VERSION; an unstamped placeholder (still containing "APP_VERSION") means local dev.
+  if (VERSION.includes('APP_VERSION')) {
     // Unstamped local build: network first so edits show up on reload; cache only as offline fallback.
     event.respondWith(fetch(req).catch(() => caches.match(req, { ignoreSearch: true }).then((hit) => hit || caches.match('./index.html'))));
     return;
