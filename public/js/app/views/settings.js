@@ -4,7 +4,7 @@ import { APP_VERSION } from '../../config.js';
 import { exportBackup, parseBackup } from '../../backup/backup.js';
 import { storageInfo } from '../../pwa/updates.js';
 import { ACCENTS } from '../collections.js';
-import { card, chip } from './common.js';
+import { card } from './common.js';
 
 const COLLECTION_LABELS = { sessions: 'Sessions', gearSnapshots: 'Gear snapshots', sightMarks: 'Sight marks', competitions: 'Competitions' };
 const ACCENT_NAMES = { '#0B6E4F': 'Green', '#14181C': 'Ink', '#1D4ED8': 'Blue', '#B45309': 'Amber' };
@@ -74,17 +74,6 @@ export function renderSettings(ctx) {
             checked: settings.askGrades,
             onChange: (e) => ctx.saveSettings({ askGrades: e.target.checked }),
           }),
-        ),
-        h('div', { class: 'field-label', id: 'lbl-input' }, 'Default input for new sessions'),
-        h(
-          'div',
-          { class: 'grid-2', role: 'group', 'aria-labelledby': 'lbl-input' },
-          [
-            ['target', 'Target face'],
-            ['keypad', 'Keypad'],
-          ].map(([v, label]) =>
-            chip({ label, pressed: settings.defaultInput === v, fk: `def-${v}`, onClick: () => ctx.saveSettings({ defaultInput: v }) && ctx.rerender() }),
-          ),
         ),
         h('div', { class: 'field-label', id: 'lbl-accent' }, 'Accent colour'),
         h(

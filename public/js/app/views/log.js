@@ -7,7 +7,6 @@ import {
   DISTANCE_DEFAULTS,
   faceLabel,
   isSpotFace,
-  keypadValues,
   scoreFromPoint,
   zoneOf,
 } from '../scoring.js';
@@ -52,7 +51,6 @@ function renderSetup(ctx) {
     const session = L.createSession({
       date: todayIso(),
       ...setup,
-      inputMode: settings.defaultInput,
       gear: { ...settings.gear },
       gearSnapshotId: settings.activeSnapshotId,
     });
@@ -116,7 +114,6 @@ function renderActive(ctx, session) {
   const settings = ctx.repo.getSettings();
   const askGrades = settings.askGrades;
   const { current, cursor, arrowsPerEnd: n } = session;
-  const mode = session.inputMode || settings.defaultInput;
   const enter = (v, x, y) => update(ctx, (cur) => L.enterScore(cur, v, x, y, { askGrades }));
 
   const endScore = sumArrows(current.arrows);
@@ -145,37 +142,13 @@ function renderActive(ctx, session) {
     }),
   );
 
-  // --- input mode toggle
-  const toggle = h(
-    'div',
-    { class: 'toolbar' },
-    h(
-      'div',
-      { class: 'segmented', role: 'group', 'aria-label': 'Input mode' },
-      [
-        ['keypad', T.keypad],
-        ['target', T.targetFaceToggle],
-      ].map(([m, label]) =>
-        h(
-          'button',
-          {
-            type: 'button',
-            'aria-pressed': String(mode === m),
-            dataset: { fk: `mode-${m}` },
-            onClick: () => update(ctx, (cur) => L.setInputMode(cur, m)),
-          },
-          label,
-        ),
-      ),
-    ),
-    h(
-      'button',
-      { type: 'button', class: 'icon-btn', 'aria-label': T.undo, dataset: { fk: 'undo' }, onClick: () => update(ctx, L.undo) },
-      icons.undo(),
-    ),
+  const undoBtn = h(
+    'button',
+    { type: 'button', class: 'icon-btn', 'aria-label': T.undo, dataset: { fk: 'undo' }, onClick: () => update(ctx, L.undo) },
+    icons.undo(),
   );
 
-  const input = mode === 'keypad' ? keypad(session.face, enter) : targetInput(session, enter);
+  const input = targetInput(session, enter);
 
   // Move mode: the selected arrow's next score/position replaces the old one.
   const moveNotice = L.isMoving(session)
@@ -187,7 +160,7 @@ function renderActive(ctx, session) {
           { class: 'grow' },
           h('strong', null, T.movingArrow(cursor + 1, current.arrows[cursor].v)),
           ' ',
-          mode === 'keypad' ? T.moveHintKeypad : T.moveHintTarget,
+          T.moveHintTarget,
         ),
         h('button', { type: 'button', class: 'btn btn-outline-thin btn-sm', onClick: () => update(ctx, L.cancelMove) }, T.cancel),
       )
@@ -204,10 +177,10 @@ function renderActive(ctx, session) {
         { class: 'end-totals' },
         h('span', null, `${T.end} `, h('strong', null, String(endScore))),
         h('span', null, `${T.total} `, h('strong', null, String(savedTotal + endScore))),
+        undoBtn,
       ),
     ),
     slots,
-    toggle,
     moveNotice,
     input,
   );
@@ -317,20 +290,6 @@ function renderActive(ctx, session) {
 
 function findSightMark(repo, distance) {
   return repo.list('sightMarks').find((m) => parseInt(m.distance, 10) === distance) || null;
-}
-
-function keypad(face, enter) {
-  return h(
-    'div',
-    { class: 'keypad' },
-    keypadValues(face).map((k) =>
-      h(
-        'button',
-        { type: 'button', class: `key z-${zoneOf(k)}`, 'aria-label': `Score ${k === 'M' ? 'miss' : k}`, dataset: { fk: `key-${k}` }, onClick: () => enter(k, null, null) },
-        String(k),
-      ),
-    ),
-  );
 }
 
 // ---------------------------------------------------------------- target face
@@ -469,9 +428,20 @@ function targetInput(session, enter) {
     h('div', { class: 'target-stage' }, btn, loupe),
     h(
       'div',
-      { class: 'row' },
-      h('button', { type: 'button', class: 'btn key-wide z-miss', dataset: { fk: 'tap-miss' }, onClick: () => enter('M', null, null) }, T.miss),
-      h('button', { type: 'button', class: 'btn key-wide z-gold', dataset: { fk: 'tap-x' }, onClick: () => enter('X', null, null) }, 'X'),
+      { class: 'quick-keys', role: 'group', 'aria-label': 'Quick score without position' },
+      ['X', 10, 9, 8, 7, 6, 'M'].map((k) =>
+        h(
+          'button',
+          {
+            type: 'button',
+            class: `quick-key z-${zoneOf(k)}`,
+            'aria-label': `Score ${k === 'M' ? 'miss' : k}`,
+            dataset: { fk: `quick-${k}` },
+            onClick: () => enter(k, null, null),
+          },
+          String(k),
+        ),
+      ),
     ),
     h('p', { class: 'muted small center tight' }, T.prevDots),
   );

@@ -1478,3 +1478,33 @@ textarea {
   outline: 2px dashed #e5007e;
   outline-offset: 2px;
 }
+
+/* ---------------------------------------------------------------- quick score strip under the target face */
+.quick-keys {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+  width: 100%;
+}
+
+.quick-key {
+  min-height: 48px;
+  min-width: 0;
+  padding: 0;
+  border-radius: 12px;
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  background: var(--z-bg);
+  color: var(--z-fg);
+  border: 2px solid var(--z-bd);
+}
+
+/* Undo sits in the end header now that the input-mode toggle is gone */
+.end-head {
+  align-items: center;
+}
+
+.end-totals {
+  align-items: center;
+}
