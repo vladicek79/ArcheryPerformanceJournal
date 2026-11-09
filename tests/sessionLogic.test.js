@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import * as L from '../public/js/app/sessionLogic.js';
+import { collections } from '../public/js/app/collections.js';
 
 const start = (n = 3) => L.createSession({ date: '2026-11-09', distance: 18, face: '40s', arrowsPerEnd: n });
 
@@ -218,5 +219,19 @@ describe('grading moves to the next arrow', () => {
     s = L.selectArrow(L.selectArrow(s, 0), 2);
     s = L.gradeArrow(L.gradeArrow(s, 'm', 3), 's', 3);
     expect(s.cursor).toBe(2);
+  });
+});
+
+describe('performance review', () => {
+  const finished = () => ({ ...L.finishSession({ ...L.createSession({ date: '2026-11-09', distance: 18, face: '40s', arrowsPerEnd: 3 }) }), status: 'finished' });
+
+  it('accepts a session with or without a review', () => {
+    expect(collections.sessions.validate(finished())).toEqual([]);
+    expect(collections.sessions.validate({ ...finished(), review: { good: 'Calm release', workOn: 'Follow-through' } })).toEqual([]);
+  });
+
+  it('rejects a review that is not text', () => {
+    expect(collections.sessions.validate({ ...finished(), review: { good: 5 } })).toContain('invalid review');
+    expect(collections.sessions.validate({ ...finished(), review: 'x' })).toContain('invalid review');
   });
 });

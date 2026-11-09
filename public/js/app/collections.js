@@ -39,6 +39,7 @@ export const collections = {
       if (!FACE_IDS.includes(r.face)) errs.push('invalid face');
       if (!ARROWS_PER_END.includes(r.arrowsPerEnd)) errs.push('arrows per end must be 3 or 6');
       if (!['active', 'finished'].includes(r.status)) errs.push('invalid status');
+      if (r.review != null && (typeof r.review !== 'object' || !isStr(r.review.good ?? '') || !isStr(r.review.workOn ?? ''))) errs.push('invalid review');
       if (!Array.isArray(r.ends)) errs.push('ends must be a list');
       // ends may be partly scored (Next auto-saves an unfinished end)
       else r.ends.forEach((e, i) => errs.push(...validateEnd(e, `end ${i + 1}`, r.arrowsPerEnd, false)));

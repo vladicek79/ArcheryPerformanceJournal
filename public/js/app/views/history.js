@@ -107,6 +107,7 @@ function renderDetail(ctx, ss) {
         { class: 'tiles' },
         tiles.map(([label, value]) => h('div', { class: 'tile' }, h('dt', null, label), h('dd', null, value))),
       ),
+      reviewCard(ctx, ss),
       sessionGroup(ss),
       card(
         { 'aria-labelledby': 'bym-title' },
@@ -167,6 +168,32 @@ function renderDetail(ctx, ss) {
       h('button', { type: 'button', class: 'btn btn-text danger', onClick: del }, T.deleteSession),
     ),
   };
+}
+
+/** What went well / what to work on: free text, saved as you type. */
+function reviewCard(ctx, ss) {
+  const field = (key, label, placeholder) =>
+    h(
+      'label',
+      { class: 'field' },
+      h('span', { class: 'field-label' }, label),
+      h('textarea', {
+        rows: 3,
+        placeholder,
+        value: ss.review?.[key] || '',
+        dataset: { fk: `review-${key}` },
+        onInput: (e) => {
+          const cur = ctx.repo.get('sessions', ss.id);
+          if (cur) ctx.save('sessions', { ...cur, review: { good: '', workOn: '', ...cur.review, [key]: e.target.value } });
+        },
+      }),
+    );
+  return card(
+    { 'aria-labelledby': 'review-title' },
+    h('h2', { class: 'card-title', id: 'review-title' }, T.review),
+    field('good', T.reviewGood, T.reviewGoodPh),
+    field('workOn', T.reviewWorkOn, T.reviewWorkOnPh),
+  );
 }
 
 /** All arrows of the session placed on one target face, with the group centre (mean point of impact). */
