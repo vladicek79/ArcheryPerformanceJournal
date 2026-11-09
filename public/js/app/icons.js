@@ -35,6 +35,7 @@ export const icons = {
     ),
   undo: () => icon(20, p('M9 14 4 9l5-5'), p('M4 9h11a5 5 0 0 1 0 10h-3')),
   back: () => icon(20, p('m15 18-6-6 6-6')),
+  forward: () => icon(20, p('m9 18 6-6-6-6')),
   close: () => icon(18, p('M6 6l12 12M18 6 6 18')),
   trash: () => icon(18, p('M3 6h18'), p('M8 6V4h8v2'), p('M19 6l-1 14H6L5 6')),
   log: () => icon(22, c(12, 12, 9), c(12, 12, 5), c(12, 12, 1)),

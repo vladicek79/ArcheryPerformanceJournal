@@ -36,7 +36,6 @@ describe('scoring and inline grading', () => {
     let s = L.selectArrow(L.enterScore(start(), 10), 2);
     s = L.gradeArrow(L.gradeArrow(s, 'm', 1), 's', 2);
     expect(s.current.arrows[2]).toMatchObject({ v: null, m: 1, s: 2 });
-    expect(L.canSaveEnd(s)).toBe(false);
     s = L.enterScore(s, 9);
     expect(s.current.arrows[2]).toMatchObject({ v: 9, m: 1, s: 2 });
     s = L.enterScore(s, 8);
@@ -127,5 +126,60 @@ describe('ends and finishing', () => {
     const done = L.finishSession({ ...s, asking: true, step: 's', inputMode: 'keypad' });
     expect(done.status).toBe('finished');
     for (const k of ['current', 'cursor', 'pinned', 'asking', 'step', 'inputMode']) expect(done[k]).toBeUndefined();
+  });
+});
+
+describe('navigating between ends', () => {
+  const twoEnds = () => {
+    let s = start(3);
+    for (const v of [10, 9, 8]) s = L.enterScore(s, v);
+    s = L.nextEnd(s); // auto-saves end 1
+    s = L.enterScore(s, 7);
+    return s;
+  };
+
+  it('next on the current end saves it and starts a new end; needs at least one arrow', () => {
+    const s0 = start(3);
+    expect(L.canNextEnd(s0)).toBe(false);
+    const s = twoEnds();
+    expect(s.ends).toHaveLength(1);
+    expect(s.current.arrows.map((a) => a.v)).toEqual([7, null, null]);
+    expect(L.viewIndex(s)).toBe(1);
+  });
+
+  it('an unfinished end is saved as it is', () => {
+    const s = L.nextEnd(twoEnds());
+    expect(s.ends[1].arrows.map((a) => a.v)).toEqual([7, null, null]);
+  });
+
+  it('previous shows a saved end; edits apply to it; next returns to the current end untouched', () => {
+    let s = L.prevEnd(twoEnds());
+    expect(s.view).toBe(0);
+    expect(L.shownEnd(s).arrows.map((a) => a.v)).toEqual([10, 9, 8]);
+    s = L.enterScore(L.selectArrow(s, 1), 'X');
+    s = L.gradeArrow(s, 'm', 1);
+    s = L.bump(s, 'ld', 1);
+    expect(s.ends[0].arrows[1]).toMatchObject({ v: 'X', m: 1 });
+    expect(s.ends[0].ld).toBe(1);
+    expect(s.current.arrows[0].v).toBe(7);
+    s = L.nextEnd(s);
+    expect(s.view).toBeNull();
+    expect(s.ends).toHaveLength(1);
+    expect(L.otherEnds(s)).toHaveLength(1);
+  });
+
+  it('previous is disabled on the first end; goToEnd jumps', () => {
+    expect(L.canPrevEnd(start())).toBe(false);
+    const s = L.goToEnd(twoEnds(), 0);
+    expect(s.view).toBe(0);
+    expect(L.goToEnd(s, null).view).toBeNull();
+  });
+
+  it('finishing keeps the current end when it has arrows and drops empty ends', () => {
+    const done = L.finishSession(twoEnds());
+    expect(done.ends).toHaveLength(2);
+    expect(done.view).toBeUndefined();
+    const done2 = L.finishSession(L.nextEnd(L.nextEnd(twoEnds()) ?? twoEnds()));
+    expect(done2.ends.every((e) => e.arrows.some((a) => a.v != null))).toBe(true);
   });
 });

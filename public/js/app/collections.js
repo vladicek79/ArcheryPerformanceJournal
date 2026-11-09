@@ -40,10 +40,12 @@ export const collections = {
       if (!ARROWS_PER_END.includes(r.arrowsPerEnd)) errs.push('arrows per end must be 3 or 6');
       if (!['active', 'finished'].includes(r.status)) errs.push('invalid status');
       if (!Array.isArray(r.ends)) errs.push('ends must be a list');
-      else r.ends.forEach((e, i) => errs.push(...validateEnd(e, `end ${i + 1}`, r.arrowsPerEnd, true)));
+      // ends may be partly scored (Next auto-saves an unfinished end)
+      else r.ends.forEach((e, i) => errs.push(...validateEnd(e, `end ${i + 1}`, r.arrowsPerEnd, false)));
       if (r.status === 'active') {
         errs.push(...validateEnd(r.current, 'current end', r.arrowsPerEnd, false));
         if (!(Number.isInteger(r.cursor) && r.cursor >= 0 && r.cursor < r.arrowsPerEnd)) errs.push('invalid cursor');
+        if (r.view != null && !(Number.isInteger(r.view) && r.view >= 0 && r.view < r.ends.length)) errs.push('invalid end view');
       }
       return errs;
     },

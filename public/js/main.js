@@ -29,8 +29,8 @@ const repo = createRepository({
 const ui = createState({ guide: false, toast: null, update: null });
 
 const TABS = [
-  ['log', T.tabs.log, icons.log],
   ['new', T.tabs.dashboard, icons.dashboard],
+  ['log', T.tabs.log, icons.log],
   ['history', T.tabs.history, icons.history],
   ['gear', T.tabs.gear, icons.gear],
   ['sights', T.tabs.sights, icons.sights],

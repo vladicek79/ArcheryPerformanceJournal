@@ -133,11 +133,14 @@ function renderSetup(ctx, active = null) {
 // ---------------------------------------------------------------- active session
 
 function renderActive(ctx, session) {
-  const { current, cursor } = session;
+  const { cursor } = session;
+  const current = L.shownEnd(session); // the end on screen (the current one or a saved one)
+  const viewing = session.view != null;
   const editing = L.isEditing(session);
   const enter = (v, x, y) => update(ctx, (cur) => L.enterScore(cur, v, x, y));
 
-  const endNo = session.ends.length + 1;
+  const endNo = L.viewIndex(session) + 1;
+  const totalEnds = session.ends.length + 1;
   const sight = findSightMark(ctx.repo, session.distance);
 
   // --- slots
@@ -182,12 +185,31 @@ function renderActive(ctx, session) {
     h(
       'div',
       { class: 'end-head' },
-      h('h2', { class: 'end-title' }, `${T.end} ${endNo}`),
+      // ‹ End N › — Next on the newest end saves it and starts a new one
       h(
         'div',
-        { class: 'end-totals' },
-        undoBtn,
+        { class: 'end-nav' },
+        h('button', { type: 'button', class: 'icon-btn', 'aria-label': T.prevEnd, disabled: !L.canPrevEnd(session), dataset: { fk: 'end-prev' }, onClick: () => update(ctx, L.prevEnd) }, icons.back()),
+        h(
+          'h2',
+          { class: 'end-title' },
+          `${T.end} ${endNo}`,
+          h('span', { class: 'end-of muted' }, viewing ? ` / ${totalEnds} · ${T.saved}` : totalEnds > 1 ? ` / ${totalEnds}` : ''),
+        ),
+        h(
+          'button',
+          {
+            type: 'button',
+            class: 'icon-btn',
+            'aria-label': viewing ? T.nextEnd : T.saveAndNext,
+            disabled: !L.canNextEnd(session),
+            dataset: { fk: 'end-next' },
+            onClick: () => update(ctx, L.nextEnd),
+          },
+          icons.forward(),
+        ),
       ),
+      h('div', { class: 'end-totals' }, undoBtn),
     ),
     input,
     grades,
@@ -213,7 +235,6 @@ function renderActive(ctx, session) {
   const finish = () => {
     const cur = findActive(ctx.repo);
     if (!cur || !L.canFinish(cur)) return;
-    if (L.hasUnsavedArrows(cur) && !confirm(T.confirmFinishPartial(cur.ends.length + 1))) return;
     const done = L.finishSession(cur);
     if (ctx.save('sessions', done)) ctx.navigate(`history/${done.id}`);
   };
@@ -241,11 +262,13 @@ function renderActive(ctx, session) {
     h(
       'div',
       { class: 'row' },
-      h(
-        'button',
-        { type: 'button', class: 'btn btn-primary grow-2', disabled: !canSave, dataset: { fk: 'save-end' }, onClick: () => update(ctx, L.saveEnd) },
-        T.saveEnd(endNo),
-      ),
+      viewing
+        ? h('button', { type: 'button', class: 'btn btn-primary grow-2', dataset: { fk: 'back-current' }, onClick: () => update(ctx, (c) => L.goToEnd(c, null)) }, T.backToEnd(totalEnds))
+        : h(
+            'button',
+            { type: 'button', class: 'btn btn-primary grow-2', disabled: !canSave, dataset: { fk: 'save-end' }, onClick: () => update(ctx, L.saveEnd) },
+            T.saveEnd(endNo),
+          ),
       h('button', { type: 'button', class: 'btn btn-outline grow-1', disabled: !canFinish, onClick: finish }, T.finish),
     ),
   );
@@ -258,15 +281,25 @@ function renderActive(ctx, session) {
     const st = computeStats([e]);
     return h(
       'li',
-      { class: 'saved-end' },
+      null,
+      h(
+        'button',
+        {
+          type: 'button',
+          class: ['saved-end', session.view === i && 'is-viewed'],
+          'aria-label': `Open end ${i + 1}`,
+          'aria-current': session.view === i ? 'true' : null,
+          onClick: () => update(ctx, (c) => L.goToEnd(c, i)),
+        },
       h('span', { class: 'saved-end-no' }, `E${i + 1}`),
       h(
         'div',
         { class: 'saved-end-body' },
-        h('div', { class: 'saved-end-arrows' }, e.arrows.map((a) => String(a.v)).join('  ')),
+        h('div', { class: 'saved-end-arrows' }, e.arrows.map((a) => (a.v == null ? '–' : String(a.v))).join('  ')),
         h('div', { class: 'muted small' }, `M ${fmt(st.avgM)} · S ${fmt(st.avgS)} · LD ${e.cld}/${e.ld}`),
       ),
       h('div', { class: 'saved-end-score' }, h('strong', null, String(sc)), h('span', { class: 'muted xsmall' }, `Σ ${run}`)),
+      ),
     );
   });
 
@@ -321,8 +354,8 @@ function faceRings(face) {
 const LOUPE_SPAN = 24; // viewBox units shown in the magnifier (the face is 202 wide → ~3× zoom)
 
 function arrowDots(session) {
-  const prev = session.ends.flatMap((e) => e.arrows).filter((a) => a.x != null);
-  const cur = session.current.arrows.map((a, i) => ({ a, i })).filter(({ a }) => a.x != null);
+  const prev = L.otherEnds(session).flatMap((e) => e.arrows).filter((a) => a.x != null);
+  const cur = L.shownEnd(session).arrows.map((a, i) => ({ a, i })).filter(({ a }) => a.x != null);
   const movingIdx = L.isEditing(session) ? session.cursor : -1;
   return [
     ...prev.map((a) => s('circle', { cx: a.x * 100, cy: a.y * 100, r: 3.2, fill: 'rgba(20,24,28,0.6)', stroke: '#FFFFFF', 'stroke-width': 1.2 })),
@@ -474,7 +507,7 @@ const round3 = (n) => Math.round(n * 1000) / 1000;
 /** Two compact rows (M and S, grades 1–5) for the selected arrow, styled like the score keys. */
 function gradePanel(session, { onGrade, onDelete, onDone }) {
   const editing = L.isEditing(session);
-  const a = session.current.arrows[session.cursor];
+  const a = L.shownEnd(session).arrows[session.cursor];
   const scored = a.v != null;
   const row = (kind, label, full) =>
     h(

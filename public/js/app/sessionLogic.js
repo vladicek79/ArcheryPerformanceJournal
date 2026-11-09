@@ -1,5 +1,9 @@
 // Active-session state transitions (HANDOFF §3). Pure: every function returns a new session object.
 // The active session is persisted after every transition so the app resumes exactly where it was.
+//
+// Model: `ends` are the saved ends, `current` is the newest (in-progress) end. `view` is the end
+// shown on screen: null = the current end, a number = a saved end (it can be edited in place).
+// `cursor` / `pinned` select an arrow inside the shown end.
 
 export function emptyArrow() {
   return { v: null, m: null, s: null, x: null, y: null };
@@ -18,6 +22,7 @@ export function createSession({ date, distance, face, arrowsPerEnd, gear = null,
     status: 'active',
     ends: [],
     current: emptyEnd(arrowsPerEnd),
+    view: null,
     cursor: 0,
     pinned: false,
     gear,
@@ -31,25 +36,49 @@ export function nextEmpty(arrows) {
   return arrows.findIndex((a) => a.v == null);
 }
 
+const hasArrows = (end) => end.arrows.some((a) => a.v != null);
+
+/** Index of the shown end among all ends (saved ends first, then the current one). */
+export function viewIndex(session) {
+  return session.view == null ? session.ends.length : session.view;
+}
+
+/** The end shown on screen. */
+export function shownEnd(session) {
+  return session.view == null ? session.current : session.ends[session.view];
+}
+
+/** All ends other than the shown one (for drawing earlier/later groups on the face). */
+export function otherEnds(session) {
+  const all = [...session.ends, session.current];
+  return all.filter((_, i) => i !== viewIndex(session));
+}
+
+/** Apply `fn` to a clone's shown end. */
+function withShown(session, fn) {
+  const s = clone(session);
+  fn(shownEnd(s), s);
+  return s;
+}
+
 /**
- * Record a score (target touch or quick key).
+ * Record a score (target touch or quick key) in the shown end.
  * - While an arrow is selected for editing, the score and position replace that arrow (grades kept).
  * - Otherwise it fills the selected empty slot, or the first empty one. A full end ignores input.
  * The arrow that received the score stays selected so it can be graded right away.
  */
 export function enterScore(session, v, x = null, y = null) {
-  const s = clone(session);
-  const arrows = s.current.arrows;
-  let cur = s.cursor;
-  if (!s.pinned && arrows[cur].v != null) {
-    const ne = nextEmpty(arrows);
-    if (ne < 0) return session;
-    cur = ne;
+  const arrows = shownEnd(session).arrows;
+  let cur = session.cursor;
+  if (!session.pinned && arrows[cur].v != null) {
+    cur = nextEmpty(arrows);
+    if (cur < 0) return session;
   }
-  arrows[cur] = { ...arrows[cur], v, x: x ?? null, y: y ?? null };
-  s.cursor = cur;
-  s.pinned = false;
-  return s;
+  return withShown(session, (end, s) => {
+    end.arrows[cur] = { ...end.arrows[cur], v, x: x ?? null, y: y ?? null };
+    s.cursor = cur;
+    s.pinned = false;
+  });
 }
 
 /**
@@ -57,16 +86,16 @@ export function enterScore(session, v, x = null, y = null) {
  * score it after). Tapping the current grade again clears it.
  */
 export function gradeArrow(session, kind, g) {
-  if (!session.current.arrows[session.cursor]) return session;
-  const s = clone(session);
-  const t = s.current.arrows[s.cursor];
-  t[kind] = t[kind] === g ? null : g;
-  return s;
+  if (!shownEnd(session).arrows[session.cursor]) return session;
+  return withShown(session, (end, s) => {
+    const t = end.arrows[s.cursor];
+    t[kind] = t[kind] === g ? null : g;
+  });
 }
 
 /** True while an already scored arrow is selected for editing (next score replaces it). */
 export function isEditing(session) {
-  return !!session.pinned && session.current.arrows[session.cursor].v != null;
+  return !!session.pinned && shownEnd(session).arrows[session.cursor]?.v != null;
 }
 
 /**
@@ -91,15 +120,15 @@ export function doneEditing(session) {
 
 /** Delete the selected arrow (score, position and grades). Its slot is filled next. */
 export function clearArrow(session) {
-  const s = clone(session);
-  s.current.arrows[s.cursor] = emptyArrow();
-  s.pinned = false;
-  return s;
+  return withShown(session, (end, s) => {
+    end.arrows[s.cursor] = emptyArrow();
+    s.pinned = false;
+  });
 }
 
-/** Clear the last scored arrow in the current end. */
+/** Clear the last scored arrow in the shown end. */
 export function undo(session) {
-  const arrows = session.current.arrows;
+  const arrows = shownEnd(session).arrows;
   let last = -1;
   for (let i = arrows.length - 1; i >= 0; i--) {
     if (arrows[i].v != null) {
@@ -108,56 +137,92 @@ export function undo(session) {
     }
   }
   if (last < 0) return session;
-  const s = clone(session);
-  s.current.arrows[last] = emptyArrow();
-  s.cursor = last;
-  s.pinned = false;
-  return s;
+  return withShown(session, (end, s) => {
+    end.arrows[last] = emptyArrow();
+    s.cursor = last;
+    s.pinned = false;
+  });
 }
 
 /** Let-down steppers. Correct let-downs can never exceed let-downs. */
 export function bump(session, key, delta) {
-  const s = clone(session);
-  const e = s.current;
-  const v = Math.max(0, (e[key] || 0) + delta);
-  e[key] = v;
-  if (key === 'ld' && e.cld > v) e.cld = v;
-  if (key === 'cld' && v > e.ld) e.ld = v;
-  return s;
+  return withShown(session, (e) => {
+    const v = Math.max(0, (e[key] || 0) + delta);
+    e[key] = v;
+    if (key === 'ld' && e.cld > v) e.cld = v;
+    if (key === 'cld' && v > e.ld) e.ld = v;
+  });
 }
 
 export function setNote(session, note) {
-  const s = clone(session);
-  s.current.note = note;
-  return s;
+  return withShown(session, (e) => {
+    e.note = note;
+  });
 }
 
-export function canSaveEnd(session) {
-  return session.current.arrows.every((a) => a.v != null);
-}
+// ---------------------------------------------------------------- end navigation
 
-export function hasUnsavedArrows(session) {
-  return session.current.arrows.some((a) => a.v != null);
-}
-
-export function saveEnd(session) {
-  if (!canSaveEnd(session)) return session;
-  const s = clone(session);
-  s.ends.push(s.current);
-  s.current = emptyEnd(s.arrowsPerEnd);
-  s.cursor = 0;
+function resetCursor(s) {
+  const ne = nextEmpty(shownEnd(s).arrows);
+  s.cursor = ne >= 0 ? ne : 0;
   s.pinned = false;
   return s;
 }
 
-export function canFinish(session) {
-  return session.ends.length > 0;
+export function canPrevEnd(session) {
+  return viewIndex(session) > 0;
 }
 
-/** Turn the active session into a finished one. The unsaved current end and UI fields
- * (including asking/step/inputMode left by older app versions) are dropped. */
+/** Next from the current end saves it (auto-save) and starts a new one; needs at least one arrow. */
+export function canNextEnd(session) {
+  return session.view != null || hasArrows(session.current);
+}
+
+export function prevEnd(session) {
+  if (!canPrevEnd(session)) return session;
+  const s = clone(session);
+  s.view = viewIndex(s) - 1;
+  return resetCursor(s);
+}
+
+export function nextEnd(session) {
+  if (!canNextEnd(session)) return session;
+  const s = clone(session);
+  if (s.view != null) {
+    s.view = s.view + 1 < s.ends.length ? s.view + 1 : null;
+    return resetCursor(s);
+  }
+  s.ends.push(s.current);
+  s.current = emptyEnd(s.arrowsPerEnd);
+  return resetCursor(s);
+}
+
+/** Jump to a saved end (index into `ends`), or to the current end with null. */
+export function goToEnd(session, i) {
+  const s = clone(session);
+  s.view = i == null || i >= s.ends.length ? null : Math.max(0, i);
+  return resetCursor(s);
+}
+
+/** Save the current end and start a new one (same as Next on the current end). */
+export const saveEnd = nextEnd;
+export const canSaveEnd = (session) => session.view == null && hasArrows(session.current);
+
+export function hasUnsavedArrows(session) {
+  return hasArrows(session.current);
+}
+
+export function canFinish(session) {
+  return session.ends.length > 0 || hasArrows(session.current);
+}
+
+/**
+ * Turn the active session into a finished one. The current end is kept when it has arrows;
+ * empty ends and UI fields (including asking/step/inputMode left by older app versions) are dropped.
+ */
 export function finishSession(session) {
   if (!canFinish(session)) return session;
-  const { current: _c, cursor: _cu, pinned: _p, asking: _a, step: _st, inputMode: _im, ...rest } = clone(session);
-  return { ...rest, status: 'finished' };
+  const { current, view: _v, cursor: _cu, pinned: _p, asking: _a, step: _st, inputMode: _im, ...rest } = clone(session);
+  const ends = [...rest.ends, current].filter(hasArrows);
+  return { ...rest, ends, status: 'finished' };
 }

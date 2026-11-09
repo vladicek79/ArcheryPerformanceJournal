@@ -149,7 +149,7 @@ function renderDetail(ctx, ss) {
                   null,
                   h('td', { class: 'muted nowrap' }, dateLbl),
                   h('td', null, String(i + 1)),
-                  h('td', { class: 'strong nowrap' }, e.arrows.map((a) => String(a.v)).join(' ')),
+                  h('td', { class: 'strong nowrap' }, e.arrows.map((a) => (a.v == null ? '–' : String(a.v))).join(' ')),
                   h('td', { class: 'strong' }, String(sumArrows(e.arrows))),
                   h('td', null, fmt(es.avgM)),
                   h('td', null, fmt(es.avgS)),

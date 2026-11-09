@@ -1676,3 +1676,55 @@ textarea {
 }
 
 
+
+/* ---------------------------------------------------------------- end navigation */
+.end-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.end-nav .end-title {
+  white-space: nowrap;
+}
+
+.end-of {
+  font-size: 13px;
+  font-weight: 500;
+  font-family: var(--font-body);
+}
+
+button.saved-end {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  border-radius: 10px;
+}
+
+.saved-ends li:last-child .saved-end {
+  border-bottom: 0;
+}
+
+.saved-end.is-viewed {
+  box-shadow: inset 3px 0 0 var(--accent);
+  background: var(--ground);
+}
+
+/* tighter arrow column so 6 arrows are about as tall as the target */
+.aim-row .slots {
+  gap: 0;
+}
+
+.aim-row .slot {
+  padding: 2px 0;
+}
+
+.aim-row .slot .score-chip {
+  width: 34px;
+  height: 34px;
+}
