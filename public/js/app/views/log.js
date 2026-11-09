@@ -115,8 +115,6 @@ function renderActive(ctx, session) {
   const editing = L.isEditing(session);
   const enter = (v, x, y) => update(ctx, (cur) => L.enterScore(cur, v, x, y));
 
-  const endScore = sumArrows(current.arrows);
-  const savedTotal = session.ends.reduce((t, e) => t + sumArrows(e.arrows), 0);
   const endNo = session.ends.length + 1;
   const sight = findSightMark(ctx.repo, session.distance);
 
@@ -166,8 +164,6 @@ function renderActive(ctx, session) {
       h(
         'div',
         { class: 'end-totals' },
-        h('span', null, `${T.end} `, h('strong', null, String(endScore))),
-        h('span', null, `${T.total} `, h('strong', null, String(savedTotal + endScore))),
         undoBtn,
       ),
     ),
