@@ -85,7 +85,13 @@ export function renderSettings(ctx) {
       card(
         { 'aria-labelledby': 'set-backup' },
         h('h2', { class: 'card-title', id: 'set-backup' }, 'Backup'),
-        h('p', { class: 'muted small' }, 'All data stays on this device. Export a backup file regularly and keep it somewhere private (Drive, e-mail to yourself).'),
+        h(
+          'p',
+          { class: 'muted small' },
+          ctx.sync?.signedIn()
+            ? 'Your journal is synced to your Google Drive. A backup file is an extra copy you keep yourself.'
+            : 'All data stays on this device. Export a backup file regularly and keep it somewhere private (Drive, e-mail to yourself).',
+        ),
         h('p', { class: 'small' }, 'Last backup: ', h('strong', null, meta.lastBackupAt ? new Date(meta.lastBackupAt).toLocaleString('en-GB') : 'never')),
         h(
           'div',
