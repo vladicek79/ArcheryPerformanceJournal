@@ -1926,3 +1926,39 @@ button.saved-end {
   box-shadow: inset 0 0 0 1.5px #e5007e;
   color: #e5007e;
 }
+
+/* ---------------------------------------------------------------- session group on the detail page */
+.group-face {
+  width: min(100%, 360px);
+  margin: 0 auto;
+}
+
+.group-face svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.group-legend {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mpi-mark {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  border-radius: 50%;
+  border: 2px solid #e5007e;
+}
+
+/* quick score keys: the selected arrow's score is ringed, the others fade (same as the grade rows) */
+.quick-keys:has(.quick-key[aria-pressed='true']) .quick-key[aria-pressed='false'] {
+  opacity: 0.35;
+}
+
+.quick-key[aria-pressed='true'] {
+  border-color: var(--ink);
+  box-shadow: 0 0 0 2px var(--surface) inset;
+}

@@ -183,3 +183,40 @@ describe('navigating between ends', () => {
     expect(done2.ends.every((e) => e.arrows.some((a) => a.v != null))).toBe(true);
   });
 });
+
+describe('grading moves to the next arrow', () => {
+  it('completing M and S selects the next arrow; grading-only works without scores', () => {
+    let s = start(3);
+    s = L.gradeArrow(L.gradeArrow(s, 'm', 1), 's', 2);
+    expect(s.cursor).toBe(1);
+    s = L.gradeArrow(L.gradeArrow(s, 's', 3), 'm', 2);
+    expect(s.cursor).toBe(2);
+    expect(s.current.arrows.map((a) => [a.m, a.s])).toEqual([[1, 2], [2, 3], [null, null]]);
+  });
+
+  it('after score + M + S the next score goes to the next arrow', () => {
+    let s = L.gradeArrow(L.gradeArrow(L.enterScore(start(3), 10), 'm', 1), 's', 1);
+    expect(s.cursor).toBe(1);
+    s = L.enterScore(s, 9);
+    expect(s.current.arrows.map((a) => a.v)).toEqual([10, 9, null]);
+  });
+
+  it('moving onto an already scored arrow selects it for grading but the next score fills an empty slot', () => {
+    let s = L.enterScore(L.enterScore(start(3), 10), 9);
+    s = L.gradeArrow(L.gradeArrow(L.selectArrow(s, 0), 'm', 2), 's', 2);
+    expect(s.cursor).toBe(1);
+    expect(L.isEditing(s)).toBe(false);
+    s = L.enterScore(s, 8);
+    expect(s.current.arrows.map((a) => a.v)).toEqual([10, 9, 8]);
+  });
+
+  it('re-grading a complete arrow and the last arrow do not move', () => {
+    let s = L.gradeArrow(L.gradeArrow(start(3), 'm', 1), 's', 1);
+    s = L.selectArrow(s, 0);
+    s = L.gradeArrow(s, 's', 4);
+    expect(s.cursor).toBe(0);
+    s = L.selectArrow(L.selectArrow(s, 0), 2);
+    s = L.gradeArrow(L.gradeArrow(s, 'm', 3), 's', 3);
+    expect(s.cursor).toBe(2);
+  });
+});

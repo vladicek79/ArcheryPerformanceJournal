@@ -6,7 +6,6 @@ import {
   ARROWS_PER_END,
   DISTANCE_DEFAULTS,
   faceLabel,
-  isSpotFace,
   scoreFromPoint,
   zoneOf,
 } from '../scoring.js';
@@ -15,6 +14,7 @@ import * as L from '../sessionLogic.js';
 import { T } from '../strings.js';
 import { icons } from '../icons.js';
 import { card, chip, sectionLabel } from './common.js';
+import { VB, faceRings } from './face.js';
 
 export function findActive(repo) {
   return repo.list('sessions', { filter: (x) => x.status === 'active' })[0] || null;
@@ -335,29 +335,6 @@ function findSightMark(repo, distance) {
 
 // ---------------------------------------------------------------- target face
 
-const VB = 101; // viewBox half-size; the face radius is 100
-
-function faceRings(face) {
-  const ring = (r, fill, stroke, sw = 0.6) => s('circle', { r, fill, stroke, 'stroke-width': sw });
-  if (isSpotFace(face)) {
-    return [
-      ring(100, '#00A2E8', '#14181C', 0.8),
-      ring(80, '#D22B2B', '#14181C', 0.8),
-      ring(60, '#D22B2B', '#14181C', 0.8),
-      ring(40, '#FFE11A', '#14181C', 0.8),
-      ring(20, '#FFE11A', '#14181C', 0.8),
-      ring(10, 'none', '#14181C', 0.6),
-      s('path', { d: 'M-2 0h4M0 -2v4', stroke: '#14181C', 'stroke-width': 0.6 }),
-    ];
-  }
-  const colours = ['#FFFFFF', '#FFFFFF', '#1A1A1A', '#1A1A1A', '#00A2E8', '#00A2E8', '#D22B2B', '#D22B2B', '#FFE11A', '#FFE11A'];
-  return [
-    ...colours.map((fill, i) => ring(100 - i * 10, fill, fill === '#1A1A1A' ? '#FFFFFF' : '#14181C')),
-    ring(5, 'none', '#14181C', 0.5),
-    s('path', { d: 'M-1.5 0h3M0 -1.5v3', stroke: '#14181C', 'stroke-width': 0.5 }),
-  ];
-}
-
 const LOUPE_SPAN = 24; // viewBox units shown in the magnifier (the face is 202 wide → ~3× zoom)
 
 function arrowDots(session) {
@@ -384,6 +361,7 @@ function arrowDots(session) {
  * moving the finger fine-tunes the position; releasing registers the arrow. Cancel = no arrow.
  */
 function targetInput(session, enter, slots) {
+  const selectedValue = L.shownEnd(session).arrows[session.cursor]?.v ?? null;
   // magnifier: zoomed copy of the face centred on the finger, with a crosshair and the live score
   const marker = s(
     'g',
@@ -497,6 +475,8 @@ function targetInput(session, enter, slots) {
             type: 'button',
             class: `quick-key z-${zoneOf(k)}`,
             'aria-label': `Score ${k === 'M' ? 'miss' : k}`,
+            // the selected arrow's score is shown pressed; the other keys dim (like the grade rows)
+            'aria-pressed': String(selectedValue === k),
             dataset: { fk: `quick-${k}` },
             onClick: () => enter(k, null, null),
           },

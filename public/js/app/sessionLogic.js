@@ -89,7 +89,15 @@ export function gradeArrow(session, kind, g) {
   if (!shownEnd(session).arrows[session.cursor]) return session;
   return withShown(session, (end, s) => {
     const t = end.arrows[s.cursor];
+    const wasComplete = t.m != null && t.s != null;
     t[kind] = t[kind] === g ? null : g;
+    // The tap that completes M + S moves the selection to the next arrow (so arrows can be
+    // graded one after another, with or without scores). Re-grading a complete arrow stays put.
+    if (!wasComplete && t.m != null && t.s != null && s.cursor + 1 < end.arrows.length) {
+      s.cursor += 1;
+      // an empty next arrow also receives the next score; a scored one is only selected for grading
+      s.pinned = end.arrows[s.cursor].v == null;
+    }
   });
 }
 
