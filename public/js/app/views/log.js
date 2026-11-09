@@ -164,8 +164,8 @@ function renderActive(ctx, session) {
         h(
           'span',
           { class: 'slot-grades', 'aria-hidden': 'true' },
-          h('span', { class: `mini-grade ${a.m ? `g${a.m}` : 'empty'}` }, `M${a.m ?? '–'}`),
-          h('span', { class: `mini-grade ${a.s ? `g${a.s}` : 'empty'}` }, `S${a.s ?? '–'}`),
+          h('span', { class: `mini-grade ${a.m ? `g${a.m}` : 'empty'}` }, `M${a.m ?? ''}`),
+          h('span', { class: `mini-grade ${a.s ? `g${a.s}` : 'empty'}` }, `S${a.s ?? ''}`),
         ),
       );
     }),

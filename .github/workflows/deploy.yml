@@ -12,9 +12,11 @@ permissions:
   pages: write
   id-token: write
 
+# Let a running Pages deployment finish; a newer push waits (only the newest pending run is kept).
+# Cancelling mid-deploy made actions/deploy-pages fail when pushes came quickly.
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   deploy:

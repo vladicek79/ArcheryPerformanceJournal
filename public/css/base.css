@@ -1899,3 +1899,30 @@ button.saved-end {
 .slot.is-moving {
   box-shadow: none;
 }
+
+/* ---------------------------------------------------------------- selected arrow (the one the M/S rows grade) */
+/* a ring around its score chip instead of a square around the slot */
+.aim-row .slot.is-active .score-chip {
+  box-shadow:
+    0 0 0 2px var(--surface),
+    0 0 0 4px var(--accent);
+}
+
+/* selected for re-scoring (next target touch / key replaces it) */
+.aim-row .slot.is-moving .score-chip {
+  box-shadow:
+    0 0 0 2px var(--surface),
+    0 0 0 4px #e5007e;
+}
+
+/* its missing grades show as outlined placeholders, so it is clear where M and S will go */
+.aim-row .slot.is-active .mini-grade.empty {
+  visibility: visible;
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+  color: var(--accent);
+}
+
+.aim-row .slot.is-moving .mini-grade.empty {
+  box-shadow: inset 0 0 0 1.5px #e5007e;
+  color: #e5007e;
+}
