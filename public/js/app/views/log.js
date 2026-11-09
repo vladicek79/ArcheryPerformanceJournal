@@ -134,7 +134,7 @@ function renderActive(ctx, session) {
         'button',
         {
           type: 'button',
-          class: ['slot', active && 'is-active'],
+          class: ['slot', active && 'is-active', active && L.isMoving(session) && 'is-moving'],
           'aria-label': `Arrow ${i + 1}${a.v == null ? ', empty' : `, ${a.v}`}${a.m ? `, M${a.m}` : ''}${a.s ? `, S${a.s}` : ''}${active ? ', selected' : ''}`,
           dataset: { fk: `slot-${i}` },
           onClick: () => update(ctx, (cur) => L.pickSlot(cur, i)),
@@ -177,6 +177,22 @@ function renderActive(ctx, session) {
 
   const input = mode === 'keypad' ? keypad(session.face, enter) : targetInput(session, enter);
 
+  // Move mode: the selected arrow's next score/position replaces the old one.
+  const moveNotice = L.isMoving(session)
+    ? h(
+        'div',
+        { class: 'move-notice', role: 'status' },
+        h(
+          'span',
+          { class: 'grow' },
+          h('strong', null, T.movingArrow(cursor + 1, current.arrows[cursor].v)),
+          ' ',
+          mode === 'keypad' ? T.moveHintKeypad : T.moveHintTarget,
+        ),
+        h('button', { type: 'button', class: 'btn btn-outline-thin btn-sm', onClick: () => update(ctx, L.cancelMove) }, T.cancel),
+      )
+    : null;
+
   const endCard = card(
     { 'aria-label': `End ${endNo}` },
     h(
@@ -192,6 +208,7 @@ function renderActive(ctx, session) {
     ),
     slots,
     toggle,
+    moveNotice,
     input,
   );
 
@@ -346,12 +363,15 @@ const LOUPE_SPAN = 24; // viewBox units shown in the magnifier (the face is 202 
 function arrowDots(session) {
   const prev = session.ends.flatMap((e) => e.arrows).filter((a) => a.x != null);
   const cur = session.current.arrows.map((a, i) => ({ a, i })).filter(({ a }) => a.x != null);
+  const movingIdx = L.isMoving(session) ? session.cursor : -1;
   return [
     ...prev.map((a) => s('circle', { cx: a.x * 100, cy: a.y * 100, r: 3.2, fill: 'rgba(20,24,28,0.6)', stroke: '#FFFFFF', 'stroke-width': 1.2 })),
     ...cur.map(({ a, i }) =>
       s(
         'g',
-        { transform: `translate(${a.x * 100} ${a.y * 100})` },
+        { transform: `translate(${a.x * 100} ${a.y * 100})`, opacity: i === movingIdx ? 0.55 : null },
+        // the arrow being moved gets a dashed ring so you can see which one will change
+        i === movingIdx ? s('circle', { r: 10, fill: 'none', stroke: '#E5007E', 'stroke-width': 1.4, 'stroke-dasharray': '2.5 2' }) : null,
         s('circle', { r: 6.4, fill: '#E5007E', stroke: '#FFFFFF', 'stroke-width': 1.3 }),
         s('text', { y: 2.3, 'text-anchor': 'middle', 'font-size': 6.5, 'font-weight': 700, fill: '#FFFFFF' }, String(i + 1)),
       ),

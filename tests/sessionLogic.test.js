@@ -91,3 +91,42 @@ describe('ends and finishing', () => {
     expect(done.cursor).toBeUndefined();
   });
 });
+
+describe('moving an arrow', () => {
+  const graded = () => {
+    let s = start();
+    s = L.gradeArrow(L.gradeArrow(L.enterScore(s, 7, 0.4, 0.1), 'm', 2), 's', 1);
+    return s;
+  };
+
+  it('Move arrow from the sheet enters move mode for that arrow', () => {
+    let s = L.pickSlot(graded(), 0);
+    s = L.changeScore(s);
+    expect(L.isMoving(s)).toBe(true);
+    expect(s.asking).toBe(false);
+  });
+
+  it('re-placing a fully graded arrow keeps grades and does not ask again', () => {
+    let s = L.startMove(graded(), 0);
+    s = L.enterScore(s, 9, 0.15, 0.02);
+    expect(s.current.arrows[0]).toMatchObject({ v: 9, x: 0.15, y: 0.02, m: 2, s: 1 });
+    expect(s.asking).toBe(false);
+    expect(L.isMoving(s)).toBe(false);
+    expect(s.cursor).toBe(1);
+  });
+
+  it('re-placing an ungraded arrow asks for grades', () => {
+    let s = L.skipGrade(L.enterScore(start(), 6));
+    s = L.enterScore(L.startMove(s, 0), 8);
+    expect(s.asking).toBe(true);
+    expect(s.cursor).toBe(0);
+  });
+
+  it('cancel leaves the arrow unchanged', () => {
+    const before = graded();
+    const s = L.cancelMove(L.startMove(before, 0));
+    expect(L.isMoving(s)).toBe(false);
+    expect(s.current.arrows[0]).toEqual(before.current.arrows[0]);
+    expect(s.cursor).toBe(1);
+  });
+});

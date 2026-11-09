@@ -53,10 +53,13 @@ export function enterScore(session, v, x = null, y = null, { askGrades = true } 
     if (ne < 0) return session; // end is full: ignore until the end is saved or a slot is picked
     cur = ne;
   }
+  const moving = s.pinned && arrows[cur].v != null;
   arrows[cur] = { ...arrows[cur], v, x: x ?? null, y: y ?? null };
   s.cursor = cur;
   s.pinned = false;
-  if (askGrades) {
+  // Moving an arrow that is already fully graded keeps its grades without asking again.
+  const alreadyGraded = arrows[cur].m != null && arrows[cur].s != null;
+  if (askGrades && !(moving && alreadyGraded)) {
     s.asking = true;
     s.step = 'm';
     return s;
@@ -86,6 +89,25 @@ export function backToM(session) {
 /** Close the sheet and pin the slot so the next score input overwrites it (grades are kept). */
 export function changeScore(session) {
   return { ...clone(session), asking: false, step: 'm', pinned: true };
+}
+
+/** True while a scored arrow is waiting for a new position/score (after "Move arrow"). */
+export function isMoving(session) {
+  return session.pinned && session.current.arrows[session.cursor].v != null;
+}
+
+/** Start moving an arrow: the next target touch or key replaces its score and position. */
+export function startMove(session, i) {
+  return { ...clone(session), cursor: i, pinned: true, asking: false, step: 'm' };
+}
+
+/** Leave move mode without changing the arrow. */
+export function cancelMove(session) {
+  const s = clone(session);
+  s.pinned = false;
+  const ne = nextEmpty(s.current.arrows);
+  if (ne >= 0) s.cursor = ne;
+  return s;
 }
 
 /** Tapping a scored slot reopens grading; tapping an empty slot selects it as the next to fill. */
