@@ -25,7 +25,7 @@ To test on an Android phone: connect over USB, open `chrome://inspect` on the PC
 | **Gear** | Current equipment setup (bow, arrows, string, tuning, stabilisers & accessories) and named setup snapshots. A new session records the current gear and snapshot. |
 | **Sights** | Sight marks per distance (shown as a pill on the active session) and the competition log. |
 | **Grades** (header) | The M/S grading rubric. |
-| **Settings** (header gear icon) | Ask-for-grades toggle, default input, accent colour, **backup export / import (merge or replace, with undo)**, storage diagnostics. |
+| **Settings** (header gear icon) | Accent colour, **backup export / import (merge or replace, with undo)**, storage diagnostics. |
 
 ## Code layout
 
