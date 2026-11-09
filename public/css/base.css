@@ -1860,3 +1860,12 @@ button.saved-end {
   padding-left: 12px;
   padding-right: 12px;
 }
+
+/* arrow column starts at the top of the target, not vertically centred */
+.aim-row {
+  align-items: start;
+}
+
+.aim-row .slots {
+  align-self: start;
+}
