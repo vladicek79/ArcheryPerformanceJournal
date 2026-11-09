@@ -84,9 +84,6 @@ export const T = {
   addCompetition: 'Add competition',
   confirmDeleteComp: (n) => `Delete "${n}"?`,
   compNeedsField: 'Enter at least an event, date or score.',
-  backupReminder: 'Your data lives only on this phone. Back it up regularly.',
-  backupNow: 'Back up',
-  dismiss: 'Dismiss',
   newVersion: 'New version available',
   reload: 'Reload',
 };

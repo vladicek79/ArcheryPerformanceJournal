@@ -6,7 +6,6 @@ import { createState } from './core/state.js';
 import { createRepository } from './storage/repository.js';
 import { createLocalStorageAdapter } from './storage/localStorageAdapter.js';
 import { migrations } from './storage/migrations.js';
-import { needsBackupReminder } from './backup/backup.js';
 import { registerServiceWorker, requestPersistence } from './pwa/updates.js';
 import { collections, defaultSettings, DEFAULT_SIGHT_DISTANCES } from './app/collections.js';
 import { T } from './app/strings.js';
@@ -27,7 +26,7 @@ const repo = createRepository({
   defaultSettings,
   migrations,
 });
-const ui = createState({ guide: false, bannerDismissed: false, toast: null, update: null });
+const ui = createState({ guide: false, toast: null, update: null });
 
 const TABS = [
   ['log', T.tabs.log, icons.log],
@@ -141,21 +140,6 @@ function renderBanners() {
         { class: 'banner', role: 'status' },
         h('span', null, T.newVersion),
         h('button', { type: 'button', class: 'btn btn-primary btn-sm', onClick: () => st.update() }, T.reload),
-      ),
-    );
-  }
-  // Only after at least one finished session, and never over the logging screen of an active session.
-  const sessions = repo.list('sessions');
-  const hasData = sessions.some((x) => x.status === 'finished');
-  const logging = route.name === 'log' && sessions.some((x) => x.status === 'active');
-  if (hasData && !logging && !st.bannerDismissed && route.name !== 'settings' && needsBackupReminder(repo.getMeta().lastBackupAt)) {
-    items.push(
-      h(
-        'div',
-        { class: 'banner banner-warn' },
-        h('span', null, T.backupReminder),
-        h('a', { class: 'btn btn-outline-thin btn-sm', href: '#/settings' }, T.backupNow),
-        h('button', { type: 'button', class: 'icon-btn sm', 'aria-label': T.dismiss, onClick: () => ui.set({ bannerDismissed: true }) }, icons.close()),
       ),
     );
   }
