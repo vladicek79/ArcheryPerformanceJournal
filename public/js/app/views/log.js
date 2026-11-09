@@ -371,6 +371,27 @@ function targetInput(session, enter) {
     };
   };
 
+  // The loupe floats above the target face (over the arrow slots), centred, so it never covers the face.
+  // If the page is scrolled so there is no room above, it stays just below the header and moves
+  // sideways away from the finger.
+  const placeLoupe = (p) => {
+    const size = loupe.offsetWidth || 132;
+    const gap = 10;
+    const stage = btn.getBoundingClientRect();
+    const headerBottom = document.querySelector('.app-header')?.getBoundingClientRect().bottom ?? 0;
+    let top = stage.top - size - gap;
+    let left = stage.left + stage.width / 2 - size / 2;
+    if (top < headerBottom + gap) {
+      top = headerBottom + gap;
+      const fingerX = stage.left + p.px;
+      const fingerY = stage.top + p.py;
+      const covers = fingerY < top + size + 30 && fingerX > left - 30 && fingerX < left + size + 30;
+      if (covers) left = fingerX < stage.left + stage.width / 2 ? stage.right - size : stage.left;
+    }
+    loupe.style.top = `${Math.round(top)}px`;
+    loupe.style.left = `${Math.round(left)}px`;
+  };
+
   const show = (p) => {
     const cx = p.x * 100;
     const cy = p.y * 100;
@@ -379,10 +400,8 @@ function targetInput(session, enter) {
     const v = scoreFromPoint(p.x, p.y, session.face);
     loupeScore.textContent = String(v);
     loupeScore.className = `score-chip loupe-score z-${zoneOf(v)}`;
-    // top-left by default; jump to top-right while the finger is under the top-left corner
-    const size = loupe.offsetWidth || 128;
-    loupe.classList.toggle('right', p.px < size + 24 && p.py < size + 24);
     loupe.hidden = false;
+    placeLoupe(p);
   };
 
   const end = (ev, commit) => {

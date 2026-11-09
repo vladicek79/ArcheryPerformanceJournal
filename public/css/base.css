@@ -1508,3 +1508,14 @@ textarea {
 .end-totals {
   align-items: center;
 }
+
+/* Loupe floats above the target (viewport-positioned from JS) */
+.loupe {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: auto;
+  width: 132px;
+  height: 132px;
+  z-index: 15;
+}
