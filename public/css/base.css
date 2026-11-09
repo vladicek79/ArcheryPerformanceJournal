@@ -1396,3 +1396,63 @@ textarea {
 .brand > svg {
   flex: none;
 }
+
+/* ---------------------------------------------------------------- target magnifier (loupe) */
+.target-stage {
+  position: relative;
+  width: min(100%, 340px);
+}
+
+.target-stage .target-btn {
+  width: 100%;
+}
+
+.target-btn {
+  touch-action: none; /* finger drags aim instead of scrolling the page */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.loupe {
+  position: absolute;
+  top: -6px;
+  left: -6px;
+  width: 128px;
+  height: 128px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 3px solid #ffffff;
+  box-shadow:
+    0 0 0 1px rgba(20, 24, 28, 0.35),
+    0 6px 18px rgba(20, 24, 28, 0.35);
+  background: #ffffff;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.loupe.right {
+  left: auto;
+  right: -6px;
+}
+
+.loupe[hidden] {
+  display: none;
+}
+
+.loupe svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.loupe-score {
+  position: absolute;
+  left: 50%;
+  bottom: 6px;
+  transform: translateX(-50%);
+  width: 34px;
+  height: 34px;
+  font-size: 15px;
+  box-shadow: 0 1px 4px rgba(20, 24, 28, 0.4);
+}

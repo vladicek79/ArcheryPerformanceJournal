@@ -43,7 +43,7 @@ export const T = {
   targetFaceToggle: 'Target face',
   undo: 'Undo last arrow',
   miss: 'Miss (M)',
-  prevDots: 'Previous ends shown as small dark dots.',
+  prevDots: 'Touch, slide to fine-tune, release to score. Previous ends are small dark dots.',
   hint: 'Score an arrow, then grade M and S. Tap a scored arrow above to re-grade it.',
   letDowns: 'Let-downs',
   correctLetDowns: 'Correct let-downs',

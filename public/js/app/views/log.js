@@ -341,11 +341,12 @@ function faceRings(face) {
   ];
 }
 
-function targetInput(session, enter) {
+const LOUPE_SPAN = 24; // viewBox units shown in the magnifier (the face is 202 wide → ~3× zoom)
+
+function arrowDots(session) {
   const prev = session.ends.flatMap((e) => e.arrows).filter((a) => a.x != null);
   const cur = session.current.arrows.map((a, i) => ({ a, i })).filter(({ a }) => a.x != null);
-
-  const dots = [
+  return [
     ...prev.map((a) => s('circle', { cx: a.x * 100, cy: a.y * 100, r: 3.2, fill: 'rgba(20,24,28,0.6)', stroke: '#FFFFFF', 'stroke-width': 1.2 })),
     ...cur.map(({ a, i }) =>
       s(
@@ -356,31 +357,96 @@ function targetInput(session, enter) {
       ),
     ),
   ];
+}
 
-  const onTap = (ev) => {
-    if (ev.detail === 0) return; // keyboard activation: use the keypad instead
-    const r = ev.currentTarget.getBoundingClientRect();
-    const x = (((ev.clientX - r.left) / r.width) * 2 * VB - VB) / 100;
-    const y = (((ev.clientY - r.top) / r.height) * 2 * VB - VB) / 100;
-    const d = Math.hypot(x, y);
-    const v = scoreFromPoint(x, y, session.face);
-    const keep = d < 1.05;
-    enter(v, keep ? round3(x) : null, keep ? round3(y) : null);
+/**
+ * Target face input. Touch (or press) shows a magnifier with the exact hit point and its score;
+ * moving the finger fine-tunes the position; releasing registers the arrow. Cancel = no arrow.
+ */
+function targetInput(session, enter) {
+  // magnifier: zoomed copy of the face centred on the finger, with a crosshair and the live score
+  const marker = s(
+    'g',
+    null,
+    s('circle', { r: 1.1, fill: '#E5007E', stroke: '#FFFFFF', 'stroke-width': 0.4 }),
+    s('path', { d: 'M-4 0h2.4M1.6 0h2.4M0 -4v2.4M0 1.6v2.4', stroke: '#E5007E', 'stroke-width': 0.45, 'stroke-linecap': 'round' }),
+  );
+  const loupeSvg = s('svg', { 'aria-hidden': 'true', focusable: 'false' }, faceRings(session.face), arrowDots(session), marker);
+  const loupeScore = h('span', { class: 'score-chip loupe-score' });
+  const loupe = h('div', { class: 'loupe', 'aria-hidden': 'true', hidden: true }, loupeSvg, loupeScore);
+
+  let active = null; // { id, x, y }
+  const btn = h(
+    'button',
+    {
+      type: 'button',
+      class: 'target-btn',
+      'aria-label': 'Target face: touch where the arrow landed, slide to fine-tune, release to score (keyboard users: use Keypad)',
+    },
+    s('svg', { viewBox: `${-VB} ${-VB} ${VB * 2} ${VB * 2}`, 'aria-hidden': 'true', focusable: 'false' }, faceRings(session.face), arrowDots(session)),
+  );
+
+  const toFace = (ev) => {
+    const r = btn.getBoundingClientRect();
+    return {
+      x: (((ev.clientX - r.left) / r.width) * 2 * VB - VB) / 100,
+      y: (((ev.clientY - r.top) / r.height) * 2 * VB - VB) / 100,
+      // finger position inside the stage, used to keep the loupe out from under the finger
+      px: ev.clientX - r.left,
+      py: ev.clientY - r.top,
+    };
   };
+
+  const show = (p) => {
+    const cx = p.x * 100;
+    const cy = p.y * 100;
+    loupeSvg.setAttribute('viewBox', `${cx - LOUPE_SPAN / 2} ${cy - LOUPE_SPAN / 2} ${LOUPE_SPAN} ${LOUPE_SPAN}`);
+    marker.setAttribute('transform', `translate(${cx} ${cy})`);
+    const v = scoreFromPoint(p.x, p.y, session.face);
+    loupeScore.textContent = String(v);
+    loupeScore.className = `score-chip loupe-score z-${zoneOf(v)}`;
+    // top-left by default; jump to top-right while the finger is under the top-left corner
+    const size = loupe.offsetWidth || 128;
+    loupe.classList.toggle('right', p.px < size + 24 && p.py < size + 24);
+    loupe.hidden = false;
+  };
+
+  const end = (ev, commit) => {
+    if (!active || ev.pointerId !== active.id) return;
+    const p = active.p;
+    active = null;
+    loupe.hidden = true;
+    btn.classList.remove('aiming');
+    if (!commit) return;
+    const keep = Math.hypot(p.x, p.y) < 1.05;
+    enter(scoreFromPoint(p.x, p.y, session.face), keep ? round3(p.x) : null, keep ? round3(p.y) : null);
+  };
+
+  btn.addEventListener('pointerdown', (ev) => {
+    if (!ev.isPrimary || ev.button > 0 || active) return;
+    ev.preventDefault();
+    try {
+      btn.setPointerCapture(ev.pointerId); // keep receiving moves when the finger leaves the face
+    } catch {
+      /* pointer already gone */
+    }
+    active = { id: ev.pointerId, p: toFace(ev) };
+    btn.classList.add('aiming');
+    show(active.p);
+  });
+  btn.addEventListener('pointermove', (ev) => {
+    if (!active || ev.pointerId !== active.id) return;
+    active.p = toFace(ev);
+    show(active.p);
+  });
+  btn.addEventListener('pointerup', (ev) => end(ev, true));
+  btn.addEventListener('pointercancel', (ev) => end(ev, false));
+  btn.addEventListener('contextmenu', (ev) => ev.preventDefault());
 
   return h(
     'div',
     { class: 'target-wrap' },
-    h(
-      'button',
-      {
-        type: 'button',
-        class: 'target-btn',
-        'aria-label': 'Target face: tap where the arrow landed (keyboard users: use Keypad)',
-        onClick: onTap,
-      },
-      s('svg', { viewBox: `${-VB} ${-VB} ${VB * 2} ${VB * 2}`, 'aria-hidden': 'true', focusable: 'false' }, faceRings(session.face), dots),
-    ),
+    h('div', { class: 'target-stage' }, btn, loupe),
     h(
       'div',
       { class: 'row' },
