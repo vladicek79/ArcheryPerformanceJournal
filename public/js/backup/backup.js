@@ -32,23 +32,28 @@ export async function exportBackup(repo) {
   const name = backupFileName();
   const json = serialiseBackup(repo.exportDocument());
   const file = new File([json], name, { type: 'application/json' });
+  let shared = false;
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
     try {
       await navigator.share({ files: [file], title: name });
+      shared = true;
     } catch (e) {
       if (e.name === 'AbortError') return false;
-      throw e;
+      // Chrome on Android refuses some file types ("NotAllowedError: Permission denied"): download instead
     }
-  } else {
-    const url = URL.createObjectURL(file);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = name;
-    document.body.append(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
+  if (!shared) download(file, name);
   repo.markBackup();
   return true;
+}
+
+function download(file, name) {
+  const url = URL.createObjectURL(file);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
