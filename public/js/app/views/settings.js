@@ -63,18 +63,7 @@ export function renderSettings(ctx) {
       h('h1', { class: 'page-title' }, 'Settings'),
       card(
         { 'aria-labelledby': 'set-log' },
-        h('h2', { class: 'card-title', id: 'set-log' }, 'Logging'),
-        h(
-          'label',
-          { class: 'switch-row' },
-          h('span', null, 'Ask for grades after each arrow', h('span', { class: 'muted small block' }, 'When off, tap a scored arrow to grade it later.')),
-          h('input', {
-            type: 'checkbox',
-            class: 'switch',
-            checked: settings.askGrades,
-            onChange: (e) => ctx.saveSettings({ askGrades: e.target.checked }),
-          }),
-        ),
+        h('h2', { class: 'card-title', id: 'set-log' }, 'Appearance'),
         h('div', { class: 'field-label', id: 'lbl-accent' }, 'Accent colour'),
         h(
           'div',

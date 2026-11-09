@@ -1519,3 +1519,111 @@ textarea {
   height: 132px;
   z-index: 15;
 }
+
+/* ---------------------------------------------------------------- inline M/S grades */
+.grade-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 4px;
+  border-top: 1px solid var(--subtle);
+}
+
+.grade-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+}
+
+.score-chip-sm {
+  width: 26px;
+  height: 26px;
+  font-size: 13px;
+}
+
+.grade-line {
+  display: grid;
+  grid-template-columns: 28px repeat(5, minmax(0, 1fr));
+  gap: 4px;
+  align-items: center;
+}
+
+.grade-line-label {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.grade-key {
+  min-height: 46px;
+  min-width: 0;
+  padding: 0;
+  border-radius: 12px;
+  border: 2px solid transparent;
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-weight: 700;
+}
+
+.grade-key:disabled {
+  opacity: 0.25;
+}
+
+/* once a grade is chosen in a row, the others fade and the chosen one is ringed */
+.grade-line:has(.grade-key[aria-pressed='true']) .grade-key[aria-pressed='false'] {
+  opacity: 0.35;
+}
+
+.grade-key[aria-pressed='true'] {
+  border-color: var(--ink);
+  box-shadow: 0 0 0 2px var(--surface) inset;
+}
+
+.danger-text {
+  color: var(--danger);
+}
+
+/* fit the whole end (slots, target, quick keys, grades) on one phone screen */
+.target-stage {
+  width: min(100%, 340px, max(240px, calc(100dvh - 400px)));
+}
+
+.grade-panel-head.is-editing {
+  padding: 4px 4px 4px 8px;
+  border-radius: 12px;
+  border: 2px dashed #e5007e;
+  color: var(--ink);
+}
+
+.grade-panel-head .btn-sm {
+  min-height: 40px;
+}
+
+/* compact the logging card so slots + target + quick keys + grades fit one screen */
+.slot {
+  min-height: 62px;
+  padding: 4px 0;
+}
+
+.quick-key {
+  min-height: 44px;
+}
+
+.grade-key {
+  min-height: 44px;
+}
+
+.grade-panel {
+  gap: 4px;
+}
+
+.target-wrap {
+  gap: 8px;
+}
+
+.target-stage {
+  width: min(100%, 340px, max(230px, calc(100dvh - 530px)));
+}

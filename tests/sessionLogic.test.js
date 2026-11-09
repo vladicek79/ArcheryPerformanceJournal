@@ -3,62 +3,95 @@ import * as L from '../public/js/app/sessionLogic.js';
 
 const start = (n = 3) => L.createSession({ date: '2026-11-09', distance: 18, face: '40s', arrowsPerEnd: n });
 
-describe('arrow-by-arrow grading flow', () => {
-  it('logs one arrow in 3 steps: score, M, S, then moves to the next slot', () => {
-    let s = start();
-    s = L.enterScore(s, 10);
-    expect(s.asking).toBe(true);
-    expect(s.step).toBe('m');
+describe('scoring and inline grading', () => {
+  it('logs one arrow in 3 taps: score, M, S — the scored arrow stays selected for grading', () => {
+    let s = L.enterScore(start(), 10, 0.05, 0.02);
+    expect(s.cursor).toBe(0);
     s = L.gradeArrow(s, 'm', 2);
-    expect(s.step).toBe('s');
     s = L.gradeArrow(s, 's', 1);
-    expect(s.asking).toBe(false);
-    expect(s.cursor).toBe(1);
-    expect(s.current.arrows[0]).toMatchObject({ v: 10, m: 2, s: 1 });
+    expect(s.current.arrows[0]).toEqual({ v: 10, m: 2, s: 1, x: 0.05, y: 0.02 });
   });
 
-  it('skip closes the sheet without grades', () => {
-    let s = L.skipGrade(L.enterScore(start(), 9));
-    expect(s.current.arrows[0]).toMatchObject({ v: 9, m: null, s: null });
-    expect(s.cursor).toBe(1);
-  });
-
-  it('does not ask when askGrades is off', () => {
-    const s = L.enterScore(start(), 'X', null, null, { askGrades: false });
-    expect(s.asking).toBe(false);
+  it('the next score goes to the next empty slot', () => {
+    let s = L.enterScore(start(), 10);
+    s = L.enterScore(s, 9);
+    expect(s.current.arrows.map((a) => a.v)).toEqual([10, 9, null]);
     expect(s.cursor).toBe(1);
   });
 
-  it('change score pins the slot so the next input overwrites it and keeps grades', () => {
-    let s = L.gradeArrow(L.gradeArrow(L.enterScore(start(), 8), 'm', 3), 's', 2);
-    s = L.pickSlot(s, 0);
-    expect(s.asking).toBe(true);
-    s = L.changeScore(s);
-    s = L.enterScore(s, 9, null, null, { askGrades: false });
-    expect(s.current.arrows[0]).toMatchObject({ v: 9, m: 3, s: 2 });
+  it('grading is optional and can be done later', () => {
+    let s = L.enterScore(L.enterScore(start(), 8), 7);
+    s = L.selectArrow(s, 0);
+    s = L.gradeArrow(s, 'm', 3);
+    expect(s.current.arrows[0].m).toBe(3);
   });
 
-  it('tapping an empty slot selects it', () => {
-    const s = L.pickSlot(start(), 2);
-    expect(s.cursor).toBe(2);
-    expect(s.asking).toBe(false);
-    expect(L.enterScore(s, 7, null, null, { askGrades: false }).current.arrows[2].v).toBe(7);
+  it('tapping the chosen grade again clears it', () => {
+    let s = L.gradeArrow(L.enterScore(start(), 9), 'm', 4);
+    s = L.gradeArrow(s, 'm', 4);
+    expect(s.current.arrows[0].m).toBeNull();
+  });
+
+  it('cannot grade an empty slot', () => {
+    const s0 = start();
+    expect(L.gradeArrow(s0, 'm', 1)).toBe(s0);
   });
 
   it('ignores scores when the end is full', () => {
     let s = start(3);
-    for (const v of [10, 9, 8]) s = L.enterScore(s, v, null, null, { askGrades: false });
+    for (const v of [10, 9, 8]) s = L.enterScore(s, v);
     expect(L.enterScore(s, 7)).toBe(s);
     expect(L.canSaveEnd(s)).toBe(true);
   });
 
+  it('tapping an empty slot makes it the next to fill', () => {
+    const s = L.selectArrow(start(), 2);
+    expect(L.isEditing(s)).toBe(false);
+    expect(L.enterScore(s, 7).current.arrows[2].v).toBe(7);
+  });
+
   it('undo clears the last scored arrow', () => {
-    let s = start();
-    s = L.enterScore(s, 10, null, null, { askGrades: false });
-    s = L.enterScore(s, 9, null, null, { askGrades: false });
+    let s = L.enterScore(L.enterScore(start(), 10), 9);
     s = L.undo(s);
     expect(s.current.arrows.map((a) => a.v)).toEqual([10, null, null]);
     expect(s.cursor).toBe(1);
+  });
+});
+
+describe('editing an existing arrow', () => {
+  const graded = () => L.gradeArrow(L.gradeArrow(L.enterScore(start(), 4, 0.62, 0.1), 'm', 2), 's', 1);
+
+  it('tapping a scored arrow enters edit mode; the next score replaces it and keeps grades', () => {
+    let s = L.enterScore(graded(), 9);
+    s = L.selectArrow(s, 0);
+    expect(L.isEditing(s)).toBe(true);
+    s = L.enterScore(s, 10, 0.08, 0.05);
+    expect(s.current.arrows[0]).toEqual({ v: 10, m: 2, s: 1, x: 0.08, y: 0.05 });
+    expect(L.isEditing(s)).toBe(false);
+    expect(s.current.arrows[1].v).toBe(9);
+  });
+
+  it('grades can be changed while editing', () => {
+    let s = L.selectArrow(graded(), 0);
+    s = L.gradeArrow(s, 's', 5);
+    expect(s.current.arrows[0]).toMatchObject({ v: 4, m: 2, s: 5 });
+    expect(L.isEditing(s)).toBe(true);
+  });
+
+  it('tapping the edited arrow again, or Done, finishes editing without changes', () => {
+    const base = L.selectArrow(graded(), 0);
+    for (const s of [L.selectArrow(base, 0), L.doneEditing(base)]) {
+      expect(L.isEditing(s)).toBe(false);
+      expect(s.current.arrows[0]).toEqual(graded().current.arrows[0]);
+    }
+  });
+
+  it('delete clears the arrow and its slot is filled next', () => {
+    let s = L.enterScore(graded(), 9);
+    s = L.clearArrow(L.selectArrow(s, 0));
+    expect(s.current.arrows[0]).toEqual(L.emptyArrow());
+    s = L.enterScore(s, 8);
+    expect(s.current.arrows.map((a) => a.v)).toEqual([8, 9, null]);
   });
 });
 
@@ -79,54 +112,14 @@ describe('ends and finishing', () => {
   it('saves full ends and finishes', () => {
     let s = start(3);
     expect(L.canFinish(s)).toBe(false);
-    for (const v of [10, 9, 8]) s = L.enterScore(s, v, null, null, { askGrades: false });
+    for (const v of [10, 9, 8]) s = L.enterScore(s, v);
     s = L.setNote(L.bump(s, 'ld', 1), 'windy');
     s = L.saveEnd(s);
     expect(s.ends).toHaveLength(1);
     expect(s.ends[0]).toMatchObject({ ld: 1, cld: 0, note: 'windy' });
     expect(s.current.arrows.every((a) => a.v == null)).toBe(true);
-    const done = L.finishSession(s);
+    const done = L.finishSession({ ...s, asking: true, step: 's', inputMode: 'keypad' });
     expect(done.status).toBe('finished');
-    expect(done.current).toBeUndefined();
-    expect(done.cursor).toBeUndefined();
-  });
-});
-
-describe('moving an arrow', () => {
-  const graded = () => {
-    let s = start();
-    s = L.gradeArrow(L.gradeArrow(L.enterScore(s, 7, 0.4, 0.1), 'm', 2), 's', 1);
-    return s;
-  };
-
-  it('Move arrow from the sheet enters move mode for that arrow', () => {
-    let s = L.pickSlot(graded(), 0);
-    s = L.changeScore(s);
-    expect(L.isMoving(s)).toBe(true);
-    expect(s.asking).toBe(false);
-  });
-
-  it('re-placing a fully graded arrow keeps grades and does not ask again', () => {
-    let s = L.startMove(graded(), 0);
-    s = L.enterScore(s, 9, 0.15, 0.02);
-    expect(s.current.arrows[0]).toMatchObject({ v: 9, x: 0.15, y: 0.02, m: 2, s: 1 });
-    expect(s.asking).toBe(false);
-    expect(L.isMoving(s)).toBe(false);
-    expect(s.cursor).toBe(1);
-  });
-
-  it('re-placing an ungraded arrow asks for grades', () => {
-    let s = L.skipGrade(L.enterScore(start(), 6));
-    s = L.enterScore(L.startMove(s, 0), 8);
-    expect(s.asking).toBe(true);
-    expect(s.cursor).toBe(0);
-  });
-
-  it('cancel leaves the arrow unchanged', () => {
-    const before = graded();
-    const s = L.cancelMove(L.startMove(before, 0));
-    expect(L.isMoving(s)).toBe(false);
-    expect(s.current.arrows[0]).toEqual(before.current.arrows[0]);
-    expect(s.cursor).toBe(1);
+    for (const k of ['current', 'cursor', 'pinned', 'asking', 'step', 'inputMode']) expect(done[k]).toBeUndefined();
   });
 });

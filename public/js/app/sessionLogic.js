@@ -9,7 +9,7 @@ export function emptyEnd(n) {
   return { arrows: Array.from({ length: n }, emptyArrow), ld: 0, cld: 0, note: '' };
 }
 
-export function createSession({ date, distance, face, arrowsPerEnd, inputMode = 'target', gear = null, gearSnapshotId = null }) {
+export function createSession({ date, distance, face, arrowsPerEnd, gear = null, gearSnapshotId = null }) {
   return {
     date,
     distance,
@@ -20,9 +20,6 @@ export function createSession({ date, distance, face, arrowsPerEnd, inputMode = 
     current: emptyEnd(arrowsPerEnd),
     cursor: 0,
     pinned: false,
-    asking: false,
-    step: 'm',
-    inputMode,
     gear,
     gearSnapshotId,
   };
@@ -34,91 +31,67 @@ export function nextEmpty(arrows) {
   return arrows.findIndex((a) => a.v == null);
 }
 
-function advance(s) {
-  s.asking = false;
-  s.step = 'm';
-  s.pinned = false;
-  const ne = nextEmpty(s.current.arrows);
-  if (ne >= 0) s.cursor = ne;
-  return s;
-}
-
-/** Record a score (keypad, target tap, Miss or X) at the cursor. */
-export function enterScore(session, v, x = null, y = null, { askGrades = true } = {}) {
+/**
+ * Record a score (target touch or quick key).
+ * - While an arrow is selected for editing, the score and position replace that arrow (grades kept).
+ * - Otherwise it fills the selected empty slot, or the first empty one. A full end ignores input.
+ * The arrow that received the score stays selected so it can be graded right away.
+ */
+export function enterScore(session, v, x = null, y = null) {
   const s = clone(session);
   const arrows = s.current.arrows;
   let cur = s.cursor;
   if (!s.pinned && arrows[cur].v != null) {
     const ne = nextEmpty(arrows);
-    if (ne < 0) return session; // end is full: ignore until the end is saved or a slot is picked
+    if (ne < 0) return session;
     cur = ne;
   }
-  const moving = s.pinned && arrows[cur].v != null;
   arrows[cur] = { ...arrows[cur], v, x: x ?? null, y: y ?? null };
   s.cursor = cur;
   s.pinned = false;
-  // Moving an arrow that is already fully graded keeps its grades without asking again.
-  const alreadyGraded = arrows[cur].m != null && arrows[cur].s != null;
-  if (askGrades && !(moving && alreadyGraded)) {
-    s.asking = true;
-    s.step = 'm';
-    return s;
-  }
-  return advance(s);
-}
-
-/** Store an M or S grade for the arrow at the cursor. M moves on to S; S closes the sheet. */
-export function gradeArrow(session, kind, g) {
-  const s = clone(session);
-  s.current.arrows[s.cursor][kind] = g;
-  if (kind === 'm') {
-    s.step = 's';
-    return s;
-  }
-  return advance(s);
-}
-
-export function skipGrade(session) {
-  return advance(clone(session));
-}
-
-export function backToM(session) {
-  return { ...clone(session), step: 'm' };
-}
-
-/** Close the sheet and pin the slot so the next score input overwrites it (grades are kept). */
-export function changeScore(session) {
-  return { ...clone(session), asking: false, step: 'm', pinned: true };
-}
-
-/** True while a scored arrow is waiting for a new position/score (after "Move arrow"). */
-export function isMoving(session) {
-  return session.pinned && session.current.arrows[session.cursor].v != null;
-}
-
-/** Start moving an arrow: the next target touch or key replaces its score and position. */
-export function startMove(session, i) {
-  return { ...clone(session), cursor: i, pinned: true, asking: false, step: 'm' };
-}
-
-/** Leave move mode without changing the arrow. */
-export function cancelMove(session) {
-  const s = clone(session);
-  s.pinned = false;
-  const ne = nextEmpty(s.current.arrows);
-  if (ne >= 0) s.cursor = ne;
   return s;
 }
 
-/** Tapping a scored slot reopens grading; tapping an empty slot selects it as the next to fill. */
-export function pickSlot(session, i) {
+/** Set the M or S grade of the selected arrow. Tapping the current grade again clears it. */
+export function gradeArrow(session, kind, g) {
+  const a = session.current.arrows[session.cursor];
+  if (!a || a.v == null) return session;
   const s = clone(session);
+  const t = s.current.arrows[s.cursor];
+  t[kind] = t[kind] === g ? null : g;
+  return s;
+}
+
+/** True while an already scored arrow is selected for editing (next score replaces it). */
+export function isEditing(session) {
+  return !!session.pinned && session.current.arrows[session.cursor].v != null;
+}
+
+/**
+ * Tap on an arrow slot: select it for editing (scored) or as the next to fill (empty).
+ * Tapping the arrow that is already being edited finishes editing.
+ */
+export function selectArrow(session, i) {
+  const s = clone(session);
+  if (s.pinned && s.cursor === i) {
+    s.pinned = false;
+    return s;
+  }
   s.cursor = i;
   s.pinned = true;
-  if (s.current.arrows[i].v != null) {
-    s.asking = true;
-    s.step = 'm';
-  }
+  return s;
+}
+
+/** Finish editing; the arrow stays selected for grading, new scores go to the next empty slot. */
+export function doneEditing(session) {
+  return { ...clone(session), pinned: false };
+}
+
+/** Delete the selected arrow (score, position and grades). Its slot is filled next. */
+export function clearArrow(session) {
+  const s = clone(session);
+  s.current.arrows[s.cursor] = emptyArrow();
+  s.pinned = false;
   return s;
 }
 
@@ -137,8 +110,6 @@ export function undo(session) {
   s.current.arrows[last] = emptyArrow();
   s.cursor = last;
   s.pinned = false;
-  s.asking = false;
-  s.step = 'm';
   return s;
 }
 
@@ -159,10 +130,6 @@ export function setNote(session, note) {
   return s;
 }
 
-export function setInputMode(session, mode) {
-  return { ...clone(session), inputMode: mode };
-}
-
 export function canSaveEnd(session) {
   return session.current.arrows.every((a) => a.v != null);
 }
@@ -178,8 +145,6 @@ export function saveEnd(session) {
   s.current = emptyEnd(s.arrowsPerEnd);
   s.cursor = 0;
   s.pinned = false;
-  s.asking = false;
-  s.step = 'm';
   return s;
 }
 
@@ -187,7 +152,8 @@ export function canFinish(session) {
   return session.ends.length > 0;
 }
 
-/** Turn the active session into a finished one. The unsaved current end is dropped. */
+/** Turn the active session into a finished one. The unsaved current end and UI fields
+ * (including asking/step/inputMode left by older app versions) are dropped. */
 export function finishSession(session) {
   if (!canFinish(session)) return session;
   const { current: _c, cursor: _cu, pinned: _p, asking: _a, step: _st, inputMode: _im, ...rest } = clone(session);

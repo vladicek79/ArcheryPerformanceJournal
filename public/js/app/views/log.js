@@ -12,9 +12,9 @@ import {
 } from '../scoring.js';
 import { sumArrows, computeStats, fmt } from '../stats.js';
 import * as L from '../sessionLogic.js';
-import { RUBRIC, T } from '../strings.js';
+import { T } from '../strings.js';
 import { icons } from '../icons.js';
-import { card, chip, gradeBadge, scoreChip, sectionLabel } from './common.js';
+import { card, chip, sectionLabel } from './common.js';
 
 export function findActive(repo) {
   return repo.list('sessions', { filter: (x) => x.status === 'active' })[0] || null;
@@ -111,10 +111,9 @@ function renderSetup(ctx) {
 // ---------------------------------------------------------------- active session
 
 function renderActive(ctx, session) {
-  const settings = ctx.repo.getSettings();
-  const askGrades = settings.askGrades;
   const { current, cursor, arrowsPerEnd: n } = session;
-  const enter = (v, x, y) => update(ctx, (cur) => L.enterScore(cur, v, x, y, { askGrades }));
+  const editing = L.isEditing(session);
+  const enter = (v, x, y) => update(ctx, (cur) => L.enterScore(cur, v, x, y));
 
   const endScore = sumArrows(current.arrows);
   const savedTotal = session.ends.reduce((t, e) => t + sumArrows(e.arrows), 0);
@@ -131,10 +130,11 @@ function renderActive(ctx, session) {
         'button',
         {
           type: 'button',
-          class: ['slot', active && 'is-active', active && L.isMoving(session) && 'is-moving'],
+          class: ['slot', active && 'is-active', active && editing && 'is-moving'],
           'aria-label': `Arrow ${i + 1}${a.v == null ? ', empty' : `, ${a.v}`}${a.m ? `, M${a.m}` : ''}${a.s ? `, S${a.s}` : ''}${active ? ', selected' : ''}`,
           dataset: { fk: `slot-${i}` },
-          onClick: () => update(ctx, (cur) => L.pickSlot(cur, i)),
+          'aria-pressed': String(active && editing),
+          onClick: () => update(ctx, (cur) => L.selectArrow(cur, i)),
         },
         h('span', { class: `score-chip z-${zoneOf(a.v)}` }, a.v == null ? String(i + 1) : String(a.v)),
         h('span', { class: 'slot-grades' }, `M${a.m ?? '–'} S${a.s ?? '–'}`),
@@ -150,21 +150,12 @@ function renderActive(ctx, session) {
 
   const input = targetInput(session, enter);
 
-  // Move mode: the selected arrow's next score/position replaces the old one.
-  const moveNotice = L.isMoving(session)
-    ? h(
-        'div',
-        { class: 'move-notice', role: 'status' },
-        h(
-          'span',
-          { class: 'grow' },
-          h('strong', null, T.movingArrow(cursor + 1, current.arrows[cursor].v)),
-          ' ',
-          T.moveHintTarget,
-        ),
-        h('button', { type: 'button', class: 'btn btn-outline-thin btn-sm', onClick: () => update(ctx, L.cancelMove) }, T.cancel),
-      )
-    : null;
+  // Edit mode (an existing arrow tapped): the next target touch / key replaces it; Delete / Done in the grades header.
+  const grades = gradePanel(session, {
+    onGrade: (kind, g) => update(ctx, (c) => L.gradeArrow(c, kind, g)),
+    onDelete: () => update(ctx, L.clearArrow),
+    onDone: () => update(ctx, L.doneEditing),
+  });
 
   const endCard = card(
     { 'aria-label': `End ${endNo}` },
@@ -181,8 +172,8 @@ function renderActive(ctx, session) {
       ),
     ),
     slots,
-    moveNotice,
     input,
+    grades,
   );
 
   // --- end details
@@ -279,7 +270,6 @@ function renderActive(ctx, session) {
       rows.length ? card({ class: 'card-list', 'aria-label': 'Saved ends' }, h('ol', { class: 'saved-ends', reversed: true }, rows.reverse())) : null,
       h('button', { type: 'button', class: 'btn btn-text danger', onClick: discard }, T.discardSession),
     ),
-    overlay: session.asking ? gradeSheet(ctx, session) : null,
   };
 }
 
@@ -317,7 +307,7 @@ const LOUPE_SPAN = 24; // viewBox units shown in the magnifier (the face is 202 
 function arrowDots(session) {
   const prev = session.ends.flatMap((e) => e.arrows).filter((a) => a.x != null);
   const cur = session.current.arrows.map((a, i) => ({ a, i })).filter(({ a }) => a.x != null);
-  const movingIdx = L.isMoving(session) ? session.cursor : -1;
+  const movingIdx = L.isEditing(session) ? session.cursor : -1;
   return [
     ...prev.map((a) => s('circle', { cx: a.x * 100, cy: a.y * 100, r: 3.2, fill: 'rgba(20,24,28,0.6)', stroke: '#FFFFFF', 'stroke-width': 1.2 })),
     ...cur.map(({ a, i }) =>
@@ -457,62 +447,55 @@ function targetInput(session, enter) {
         ),
       ),
     ),
-    h('p', { class: 'muted small center tight' }, T.prevDots),
   );
 }
 
 const round3 = (n) => Math.round(n * 1000) / 1000;
 
-// ---------------------------------------------------------------- grading sheet
+// ---------------------------------------------------------------- inline grades
 
-function gradeSheet(ctx, session) {
-  const kind = session.step === 's' ? 's' : 'm';
+/** Two compact rows (M and S, grades 1–5) for the selected arrow, styled like the score keys. */
+function gradePanel(session, { onGrade, onDelete, onDone }) {
+  const editing = L.isEditing(session);
   const a = session.current.arrows[session.cursor];
-  const title = kind === 's' ? T.shootingCycle : T.mentalProgram;
-  const skip = () => update(ctx, L.skipGrade);
-
-  const node = h(
-    'div',
-    { class: 'sheet', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'grade-title', 'aria-describedby': 'grade-step' },
+  const enabled = a && a.v != null;
+  const row = (kind, label, full) =>
     h(
       'div',
-      { class: 'sheet-head' },
-      scoreChip(a.v ?? '—', 'score-chip-lg'),
-      h(
-        'div',
-        { class: 'grow' },
-        h('div', { class: 'muted small strong', id: 'grade-step' }, `Arrow ${session.cursor + 1} of ${session.arrowsPerEnd} · Step ${kind === 'm' ? 1 : 2} of 2`),
-        h('h2', { class: 'sheet-title', id: 'grade-title' }, title),
-      ),
-      h('button', { type: 'button', class: 'btn btn-pill', 'aria-label': 'Skip grading this arrow', onClick: skip }, T.skip),
-    ),
-    h('div', { class: 'progress', 'aria-hidden': 'true' }, h('span', { class: 'on' }), h('span', { class: kind === 's' ? 'on' : '' })),
-    h(
-      'div',
-      { class: 'grade-rows' },
-      [1, 2, 3, 4, 5].map((g) => {
-        const on = a[kind] === g;
-        return h(
+      { class: 'grade-line', role: 'group', 'aria-label': `${full} for arrow ${session.cursor + 1}` },
+      h('span', { class: 'grade-line-label', 'aria-hidden': 'true' }, label),
+      [1, 2, 3, 4, 5].map((g) =>
+        h(
           'button',
           {
             type: 'button',
-            class: 'grade-row',
-            'aria-pressed': String(on),
-            dataset: on || (a[kind] == null && g === 1) ? { autofocus: '' } : undefined,
-            onClick: () => update(ctx, (c) => L.gradeArrow(c, kind, g)),
+            class: `grade-key g${g}`,
+            'aria-pressed': String(enabled && a[kind] === g),
+            'aria-label': `${full} ${g}`,
+            disabled: !enabled,
+            dataset: { fk: `grade-${kind}-${g}` },
+            onClick: () => onGrade(kind, g),
           },
-          gradeBadge(g, 'grade-badge-lg'),
-          h('span', null, RUBRIC[kind][g - 1]),
-        );
-      }),
-    ),
+          String(g),
+        ),
+      ),
+    );
+  return h(
+    'div',
+    { class: ['grade-panel', enabled && (a.m != null || a.s != null) && 'has-grade'] },
     h(
       'div',
-      { class: 'row sheet-foot' },
-      kind === 's' ? h('button', { type: 'button', class: 'btn btn-outline-thin', onClick: () => update(ctx, L.backToM) }, T.backToM) : null,
-      h('span', { class: 'grow' }),
-      h('button', { type: 'button', class: 'btn btn-outline-thin', onClick: () => update(ctx, L.changeScore) }, T.changeScore),
+      { class: ['grade-panel-head small', editing ? 'is-editing' : 'muted'], role: editing ? 'status' : null },
+      enabled
+        ? [
+            h('span', { class: `score-chip score-chip-sm z-${zoneOf(a.v)}` }, String(a.v)),
+            h('span', { class: 'grow' }, editing ? [h('strong', null, T.editingArrow(session.cursor + 1)), h('span', { class: 'sr-only' }, ` ${T.editHint}`)] : T.gradeArrow(session.cursor + 1)),
+            editing ? h('button', { type: 'button', class: 'btn btn-outline-thin btn-sm danger-text', onClick: onDelete }, T.delete) : null,
+            editing ? h('button', { type: 'button', class: 'btn btn-outline-thin btn-sm', onClick: onDone }, T.done) : null,
+          ]
+        : T.placeFirst(session.cursor + 1),
     ),
+    row('m', 'M', T.mentalProgram),
+    row('s', 'S', T.shootingCycle),
   );
-  return { node, onClose: skip, below: 'header' };
 }
