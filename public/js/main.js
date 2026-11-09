@@ -1,5 +1,15 @@
 // Bootstrap (ARCHITECTURE §7.4): service worker → persistence → repository → router → backup reminder.
-import { APP_ID, STORAGE_KEY, SCHEMA_VERSION } from './config.js';
+import {
+  APP_ID,
+  APP_ENV,
+  STORAGE_KEY,
+  SCHEMA_VERSION,
+  GOOGLE_CLIENT_ID,
+  DRIVE_SCOPE,
+  DRIVE_FILE_NAME,
+  SYNC_DEBOUNCE_MS,
+  SYNC_TOMBSTONE_RETENTION_DAYS,
+} from './config.js';
 import { h } from './core/dom.js';
 import { createRouter } from './core/router.js';
 import { createState } from './core/state.js';
@@ -7,7 +17,11 @@ import { createRepository } from './storage/repository.js';
 import { createLocalStorageAdapter } from './storage/localStorageAdapter.js';
 import { migrations } from './storage/migrations.js';
 import { registerServiceWorker, requestPersistence } from './pwa/updates.js';
-import { collections, defaultSettings, DEFAULT_SIGHT_DISTANCES } from './app/collections.js';
+import { collections, defaultSettings, DEFAULT_SIGHT_DISTANCES, SYNCED_SETTING_KEYS } from './app/collections.js';
+import { createGoogleAuth } from './sync/googleAuth.js';
+import { createDriveStore } from './sync/driveStore.js';
+import { createSyncService } from './sync/syncService.js';
+import { createSyncController } from './sync/syncController.js';
 import { T } from './app/strings.js';
 import { icons } from './app/icons.js';
 import { guideSheet } from './app/views/common.js';
@@ -19,13 +33,43 @@ import { renderSettings } from './app/views/settings.js';
 
 const repo = createRepository({
   adapter: createLocalStorageAdapter(),
+  // keep deletion markers only while Drive sync is on (they let a deletion reach other devices)
+  keepDeletionMarkers: () => auth.isSignedIn(),
   storageKey: STORAGE_KEY,
   appId: APP_ID,
   schemaVersion: SCHEMA_VERSION,
   collections,
   defaultSettings,
+  syncedSettingKeys: SYNCED_SETTING_KEYS,
   migrations,
 });
+
+// ---------------------------------------------------------------- optional Google Drive sync
+const auth = createGoogleAuth({ clientId: GOOGLE_CLIENT_ID, scope: DRIVE_SCOPE, keyPrefix: STORAGE_KEY });
+const driveStore = createDriveStore({ getToken: () => auth.getToken(), fileName: DRIVE_FILE_NAME });
+const syncService = createSyncService({
+  repo,
+  store: driveStore,
+  collections,
+  syncedSettingKeys: SYNCED_SETTING_KEYS,
+  appId: APP_ID,
+  schemaVersion: SCHEMA_VERSION,
+  migrations,
+  retentionDays: SYNC_TOMBSTONE_RETENTION_DAYS,
+});
+const sync = createSyncController({
+  auth,
+  service: syncService,
+  store: driveStore,
+  debounceMs: SYNC_DEBOUNCE_MS,
+  // the status is shown only on Settings; avoid re-rendering (and disturbing typing) elsewhere
+  onStatus: () => route.name === 'settings' && shell && renderNow(),
+  onPulled: () => {
+    dedupeSeededSightMarks();
+    if (shell) renderNow();
+  },
+});
+
 const ui = createState({ guide: false, toast: null, update: null });
 
 const TABS = [
@@ -68,7 +112,9 @@ function buildShell() {
   );
   const overlay = h('div', { class: 'overlay-root' });
   const toast = h('div', { class: 'toast-root', role: 'status', 'aria-live': 'polite' });
-  const app = h('div', { class: 'app' }, header, banner, main, nav, overlay, toast);
+  // the test build (main-test, /test/) is marked on every screen so it is never mistaken for the real journal
+  const envBadge = APP_ENV === 'test' ? h('div', { class: 'env-badge', 'aria-label': 'Test environment' }, 'TEST') : null;
+  const app = h('div', { class: ['app', APP_ENV === 'test' && 'env-test'] }, envBadge, header, banner, main, nav, overlay, toast);
   document.getElementById('app').replaceChildren(app);
   return { header, sub, main, banner, nav, tabButtons, overlay, toast };
 }
@@ -175,6 +221,19 @@ const ctx = {
   save: (name, record) => guard(() => repo.save(name, record)),
   remove: (name, id) => guard(() => (repo.remove(name, id), true)),
   saveSettings: (patch) => guard(() => repo.saveSettings(patch)),
+  env: APP_ENV,
+  sync: {
+    configured: auth.configured,
+    signedIn: () => auth.isSignedIn(),
+    email: () => auth.email(),
+    status: () => sync.status(),
+    signIn: () => auth.signIn(),
+    signOut: () => {
+      auth.signOut();
+      sync.signedOut();
+    },
+    now: () => sync.request(),
+  },
 };
 
 const router = createRouter((r) => {
@@ -194,10 +253,53 @@ function seed() {
   const s = repo.getSettings();
   if (!s.sightsSeeded) {
     if (!repo.list('sightMarks').length) {
-      for (const d of DEFAULT_SIGHT_DISTANCES) repo.save('sightMarks', { distance: `${d} m`, elevation: '', windage: '', note: '' });
+      // fixed ids, so the same default row on two devices is one record after sync
+      for (const d of DEFAULT_SIGHT_DISTANCES) repo.save('sightMarks', { id: `seed-${d}`, distance: `${d} m`, elevation: '', windage: '', note: '' });
     }
     repo.saveSettings({ sightsSeeded: true });
   }
+}
+
+/** After a sync, drop untouched default sight rows whose distance another row already covers. */
+function dedupeSeededSightMarks() {
+  const marks = repo.list('sightMarks');
+  const empty = (m) => !(m.elevation.trim() || m.windage.trim() || m.note.trim());
+  for (const m of marks) {
+    if (!m.id.startsWith('seed-') || !empty(m)) continue;
+    const dist = parseInt(m.distance, 10);
+    if (marks.some((o) => o.id !== m.id && parseInt(o.distance, 10) === dist && !(o.id.startsWith('seed-') && empty(o)))) repo.remove('sightMarks', m.id);
+  }
+}
+
+/** Is Google reachable? navigator.onLine is often true on a dead mobile connection. */
+async function googleReachable(timeoutMs = 2500) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    await fetch('https://www.googleapis.com/generate_204', { mode: 'no-cors', cache: 'no-store', signal: ctrl.signal });
+    return true;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * Google's answer after a sign-in redirect; renews an expired token silently at start-up, but only
+ * when Google answers quickly (otherwise the app starts normally and Settings offers Reconnect).
+ * Returns false when leaving the page.
+ */
+async function handleSignIn() {
+  if (!auth.configured) return true;
+  const result = auth.consumeRedirect((hash) => history.replaceState(null, '', `${location.pathname}${location.search}${hash}`));
+  if (result.kind === 'error' && !result.silent) ui.quietSet({ signInError: result.error });
+  const silentFailed = result.kind === 'error' && result.silent;
+  if (auth.isSignedIn() && !auth.getToken() && navigator.onLine && !silentFailed && (await googleReachable())) {
+    auth.signIn({ silent: true });
+    return false;
+  }
+  return true;
 }
 
 function fatal(message) {
@@ -207,6 +309,7 @@ function fatal(message) {
 }
 
 async function boot() {
+  if (!(await handleSignIn())) return;
   registerServiceWorker((apply) => ui.set({ update: apply }));
   requestPersistence();
   try {
@@ -222,7 +325,11 @@ async function boot() {
   repo.subscribe((c) => {
     if (c.type === 'settings' || c.type === 'import') applyTheme();
     if (c.type === 'import') renderNow();
+    // local edits are pushed to Drive a little later (sync's own writes do not re-trigger it)
+    if (['save', 'remove', 'settings', 'import'].includes(c.type)) sync.schedule();
   });
+  window.addEventListener('online', () => sync.request());
+  document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && sync.request());
   ui.subscribe(() => renderNow());
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && overlayClose) {
@@ -231,6 +338,7 @@ async function boot() {
     }
   });
   router.start();
+  sync.request();
 }
 
 boot();

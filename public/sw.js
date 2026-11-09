@@ -1,6 +1,11 @@
 // Service worker: cache-first app shell (ARCHITECTURE §7.2). Never touches user data.
 const VERSION = '__APP_VERSION__';
-const CACHE = `archery-journal-${VERSION}`;
+// 'test' for the main-test build served under /test/; test and production share the origin and
+// therefore the Cache Storage, so each environment only manages caches with its own prefix.
+const ENV = '__APP_ENV__';
+const PREFIX = ENV === 'test' ? 'archery-journal-test-' : 'archery-journal-';
+const CACHE = `${PREFIX}${VERSION}`;
+const ownCache = (k) => k.startsWith(PREFIX) && (ENV === 'test' || !k.startsWith('archery-journal-test-'));
 
 const SHELL = [
   './',
@@ -20,6 +25,12 @@ const SHELL = [
   './js/storage/localStorageAdapter.js',
   './js/storage/migrations.js',
   './js/backup/backup.js',
+  './js/sync/errors.js',
+  './js/sync/merge.js',
+  './js/sync/syncService.js',
+  './js/sync/googleAuth.js',
+  './js/sync/driveStore.js',
+  './js/sync/syncController.js',
   './js/pwa/updates.js',
   './js/app/collections.js',
   './js/app/gearFields.js',
@@ -45,7 +56,7 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches
       .keys()
-      .then((keys) => Promise.all(keys.filter((k) => k.startsWith('archery-journal-') && k !== CACHE).map((k) => caches.delete(k))))
+      .then((keys) => Promise.all(keys.filter((k) => ownCache(k) && k !== CACHE).map((k) => caches.delete(k))))
       .then(() => self.clients.claim()),
   );
 });

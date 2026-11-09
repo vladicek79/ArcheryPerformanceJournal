@@ -164,3 +164,47 @@ describe('import', () => {
     expect(() => repo.prepareImport(bad)).toThrow(ImportError);
   });
 });
+
+describe('deletion markers (for sync)', () => {
+  it('remove keeps a hidden marker that list/get never return', () => {
+    const ad = createMemoryAdapter();
+    const repo = make(ad);
+    repo.init();
+    const s = repo.save('sessions', session());
+    clock += 1000;
+    repo.remove('sessions', s.id);
+    expect(repo.list('sessions')).toHaveLength(0);
+    expect(repo.get('sessions', s.id)).toBeNull();
+    const marker = repo.exportDocument().collections.sessions[0];
+    expect(marker).toEqual({ id: s.id, createdAt: s.createdAt, updatedAt: '2026-11-09T10:00:01.000Z', deletedAt: '2026-11-09T10:00:01.000Z', deleted: true });
+  });
+
+  it('import accepts markers and counts only live records', () => {
+    const repo = make(createMemoryAdapter());
+    repo.init();
+    const a = repo.save('sessions', session());
+    repo.save('sessions', session());
+    repo.remove('sessions', a.id);
+    const { summary } = repo.prepareImport(repo.exportDocument());
+    expect(summary.counts.sessions).toBe(1);
+  });
+
+  it('only synced setting keys bump settingsUpdatedAt', () => {
+    const repo = make(createMemoryAdapter(), { syncedSettingKeys: ['gear'] });
+    repo.init();
+    repo.saveSettings({ accent: '#000000' });
+    expect(repo.getMeta().settingsUpdatedAt).toBeNull();
+    repo.saveSettings({ gear: { riser: 'X' } });
+    expect(repo.getMeta().settingsUpdatedAt).toBe('2026-11-09T10:00:00.000Z');
+  });
+});
+
+describe('without sync', () => {
+  it('remove drops the record when deletion markers are not needed', () => {
+    const repo = make(createMemoryAdapter(), { keepDeletionMarkers: () => false });
+    repo.init();
+    const s = repo.save('sessions', session());
+    repo.remove('sessions', s.id);
+    expect(repo.exportDocument().collections.sessions).toEqual([]);
+  });
+});

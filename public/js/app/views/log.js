@@ -243,7 +243,10 @@ function renderActive(ctx, session) {
     const cur = findActive(ctx.repo);
     if (!cur || !L.canFinish(cur)) return;
     const done = L.finishSession(cur);
-    if (ctx.save('sessions', done)) ctx.navigate(`history/${done.id}`);
+    if (ctx.save('sessions', done)) {
+      ctx.sync?.now(); // put the finished session in Drive right away (no-op when sync is off)
+      ctx.navigate(`history/${done.id}`);
+    }
   };
   const discard = () => {
     if (!confirm(T.confirmDiscard)) return;

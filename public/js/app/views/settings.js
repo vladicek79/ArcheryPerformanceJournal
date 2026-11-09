@@ -81,6 +81,7 @@ export function renderSettings(ctx) {
           ),
         ),
       ),
+      syncCard(ctx),
       card(
         { 'aria-labelledby': 'set-backup' },
         h('h2', { class: 'card-title', id: 'set-backup' }, 'Backup'),
@@ -135,8 +136,79 @@ export function renderSettings(ctx) {
         { 'aria-labelledby': 'set-about' },
         h('h2', { class: 'card-title', id: 'set-about' }, 'Storage & app'),
         storageLine,
-        h('p', { class: 'muted small' }, `Version ${APP_VERSION === '__APP_VERSION__' ? 'dev' : APP_VERSION}`),
+        h('p', { class: 'muted small' }, `Version ${APP_VERSION === '__APP_VERSION__' ? 'dev' : APP_VERSION} · ${ctx.env} environment`),
       ),
     ),
   };
+}
+
+// ---------------------------------------------------------------- Google Drive sync
+
+const SYNC_ERRORS = {
+  offline: 'Offline — will sync when back online.',
+  auth: 'Google sign-in expired.',
+  'newer-version': 'Drive has data from a newer app version. Reload to update the app.',
+  drive: 'Google Drive error.',
+};
+
+function syncStatusText(st) {
+  if (st.state === 'syncing') return 'Syncing…';
+  if (st.state === 'error') return SYNC_ERRORS[st.error] || 'Sync failed.';
+  if (st.at) return `Last synced ${new Date(st.at).toLocaleString('en-GB')}`;
+  return 'Not synced yet.';
+}
+
+function syncCard(ctx) {
+  const s = ctx.sync;
+  if (!s || !s.configured) {
+    return card(
+      { 'aria-labelledby': 'set-sync' },
+      h('h2', { class: 'card-title', id: 'set-sync' }, 'Sync with Google Drive'),
+      h('p', { class: 'muted small' }, 'Not set up in this build (no Google client ID configured).'),
+    );
+  }
+  const signInError = ctx.ui.get().signInError;
+  if (!s.signedIn()) {
+    return card(
+      { 'aria-labelledby': 'set-sync' },
+      h('h2', { class: 'card-title', id: 'set-sync' }, 'Sync with Google Drive'),
+      h(
+        'p',
+        { class: 'muted small' },
+        'Keep a copy of the journal in your own Google Drive (a hidden app-only folder) and use it on more than one device. The app works offline as before; it syncs when online.',
+      ),
+      signInError ? h('p', { class: 'error small', role: 'alert' }, `Google sign-in did not complete (${signInError}).`) : null,
+      h('button', { type: 'button', class: 'btn btn-primary', onClick: () => s.signIn() }, 'Continue with Google'),
+      h('p', { class: 'muted xsmall' }, 'Tip: export a backup below before the first sync.'),
+    );
+  }
+  const st = s.status();
+  const lastSync = ctx.repo.getMeta().lastSyncAt;
+  const shown = st.state === 'idle' && lastSync ? { ...st, at: lastSync } : st;
+  return card(
+    { 'aria-labelledby': 'set-sync' },
+    h('h2', { class: 'card-title', id: 'set-sync' }, 'Sync with Google Drive'),
+    h('p', { class: 'small' }, 'Connected', s.email() ? [' as ', h('strong', null, s.email())] : null),
+    h('p', { class: ['small', shown.state === 'error' ? 'error' : 'muted'], role: 'status' }, syncStatusText(shown), st.message ? ` ${st.message}` : ''),
+    h(
+      'div',
+      { class: 'row' },
+      st.state === 'error' && st.error === 'auth'
+        ? h('button', { type: 'button', class: 'btn btn-primary grow-1', onClick: () => s.signIn() }, 'Reconnect Google')
+        : h('button', { type: 'button', class: 'btn btn-primary grow-1', disabled: st.state === 'syncing', onClick: () => s.now() }, 'Sync now'),
+      h(
+        'button',
+        {
+          type: 'button',
+          class: 'btn btn-outline grow-1',
+          onClick: () => {
+            if (!confirm('Stop syncing on this device? The journal stays on this device and in Drive.')) return;
+            s.signOut();
+            ctx.rerender();
+          },
+        },
+        'Sign out',
+      ),
+    ),
+  );
 }

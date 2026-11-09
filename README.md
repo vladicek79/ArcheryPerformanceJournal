@@ -28,6 +28,19 @@ To test on an Android phone: connect over USB, open `chrome://inspect` on the PC
 | **Grades** (header) | The M/S grading rubric. |
 | **Settings** (header gear icon) | Accent colour, **backup export / import (merge or replace, with undo)**, storage diagnostics. |
 
+## Environments
+
+| Branch | URL | Notes |
+|---|---|---|
+| `main` | https://vladicek79.github.io/ArcheryPerformanceJournal/ | production |
+| `main-test` | https://vladicek79.github.io/ArcheryPerformanceJournal/test/ | test build: **TEST** badge, separate data and Drive file |
+
+Push to `main-test` to try a change on the phone before merging it into `main`. Every deploy republishes both from their branch tips.
+
+## Google Drive sync (optional)
+
+Settings → **Sync with Google Drive** keeps the journal in a hidden app-only folder of your own Google Drive and syncs it between devices (on start, after changes, after finishing a session, when back online, and on *Sync now*). It needs a one-time Google Cloud setup: [specs/google-drive-sync/google-setup.md](specs/google-drive-sync/google-setup.md). Until `GOOGLE_CLIENT_ID` is set in `public/js/config.js`, the card says sync is not set up.
+
 ## Code layout
 
 ```
@@ -35,6 +48,7 @@ public/                 deployed as-is (no build step)
   js/core/              router, in-memory UI state, DOM builder
   js/storage/           repository (single JSON document), localStorage adapter, migrations
   js/backup/            export (share sheet / download) and import parsing
+  js/sync/              Google Drive sync: sign-in redirect, Drive client, merge, sync service, controller
   js/pwa/               service worker registration, update prompt, storage persistence
   js/app/               app code: collections + validators, scoring, stats, session logic, views
   sw.js                 cache-first app shell (network-first while unstamped in local dev)
