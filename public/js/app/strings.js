@@ -26,6 +26,7 @@ export const T = {
   confirmReplaceFinish: 'Finish the session in progress (saved ends are kept, the unsaved end is dropped) and start a new one?',
   confirmReplaceDiscard: 'The session in progress has no saved ends and will be discarded. Start a new one?',
   sub: {
+    home: 'Dashboard',
     logIdle: 'Start a session',
     history: 'Training log',
     new: 'New session',
@@ -59,8 +60,8 @@ export const T = {
   shootingCycle: 'Shooting cycle (S)',
   gradingGuide: 'Grading guide',
   guideIntro: 'Grade the process, not the score. M = mental program, S = shooting cycle. 1 is best.',
-  trainingLog: 'Training log',
-  noSessions: 'No sessions yet. Log ends on the Log tab, then tap Finish session.',
+  trainingLog: 'Sessions',
+  noSessions: 'No sessions yet. Start one from the Dashboard with New session.',
   backToLog: 'Back to training log',
   avgByM: 'Avg arrow by mental grade',
   review: 'Performance review',

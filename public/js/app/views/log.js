@@ -20,6 +20,8 @@ import { T } from '../strings.js';
 import { icons } from '../icons.js';
 import { card, chip, sectionLabel } from './common.js';
 import { faceSheet, faceViewBox } from './face.js';
+import { SESSION_TYPES, TYPE_LABELS, isScored } from '../sessionTypes.js';
+import { emptyForm, formSections } from './sessionForms.js';
 
 export function findActive(repo) {
   return repo.list('sessions', { filter: (x) => x.status === 'active' })[0] || null;
@@ -27,7 +29,9 @@ export function findActive(repo) {
 
 export function logSubtitle(repo) {
   const a = findActive(repo);
-  return a ? `${a.distance} m · ${faceLabel(a.face)} · ${a.arrowsPerEnd} arrows/end` : T.sub.logIdle;
+  return a
+    ? `${a.type === 'competition' ? 'Competition · ' : ''}${a.distance} m · ${faceLabel(a.face)} · ${a.arrowsPerEnd} arrows/end`
+    : T.sub.logIdle;
 }
 
 export function renderLog(ctx) {
@@ -36,8 +40,58 @@ export function renderLog(ctx) {
 }
 
 /** New-session setup, reachable from the bottom bar even while a session is in progress. */
-export function renderNewSession(ctx) {
-  return renderSetup(ctx, findActive(ctx.repo));
+/** New session: step 1 picks the type (#/new), step 2 asks that type's details (#/new/<type>). */
+export function renderNewSession(ctx, params = []) {
+  const type = params[0];
+  if (SESSION_TYPES.includes(type)) return renderSetup(ctx, type, findActive(ctx.repo));
+  return renderTypeChoice(ctx);
+}
+
+const TYPE_HINTS = {
+  training: 'Score arrow by arrow with M / S grades',
+  competition: 'Scored like training, with event and placement',
+  strength: 'SPT, holding and draw drills, effort',
+  mental: 'Visualisation, breathing, shot routine…',
+};
+
+function renderTypeChoice(ctx) {
+  const chosen = ctx.ui.get().newType || 'training';
+  return {
+    content: h(
+      'div',
+      { class: 'stack' },
+      h(
+        'div',
+        { class: 'row align-center' },
+        h('a', { class: 'icon-btn', href: '#/home', 'aria-label': 'Back to dashboard' }, icons.back()),
+        h('h1', { class: 'page-title sm grow' }, T.newSession),
+      ),
+      card(
+        { class: 'setup-card', 'aria-label': 'Session type' },
+        sectionLabel('Session type'),
+        h(
+          'div',
+          { class: 'type-list', role: 'radiogroup', 'aria-label': 'Session type' },
+          SESSION_TYPES.map((t) =>
+            h(
+              'button',
+              {
+                type: 'button',
+                role: 'radio',
+                class: 'type-option',
+                'aria-checked': String(chosen === t),
+                dataset: { fk: `type-${t}` },
+                onClick: () => ctx.ui.set({ newType: t }),
+              },
+              h('span', { class: 'type-option-title' }, TYPE_LABELS[t]),
+              h('span', { class: 'type-option-sub' }, TYPE_HINTS[t]),
+            ),
+          ),
+        ),
+        h('a', { class: 'btn btn-primary btn-xl', href: `#/new/${chosen}`, dataset: { fk: 'start-type' } }, T.start),
+      ),
+    ),
+  };
 }
 
 /** Apply a session transition to the stored active session and persist it. */
@@ -51,15 +105,25 @@ function update(ctx, fn, { rerender = true } = {}) {
 
 // ---------------------------------------------------------------- new session
 
-function renderSetup(ctx, active = null) {
+function renderSetup(ctx, type, active = null) {
   const settings = ctx.repo.getSettings();
   // distance and face are remembered from the last session; arrows per end always start at the default
   const last = settings.lastSetup;
   // a face no longer offered (the single 40 cm 10–6 spot) falls back to the triple
-  const setup = ctx.ui.get().setup || { ...last, face: SETUP_FACES.includes(last.face) ? last.face : '40t', arrowsPerEnd: DEFAULT_ARROWS_PER_END };
+  const setup = ctx.ui.get().setup || {
+    distance: last.distance,
+    face: SETUP_FACES.includes(last.face) ? last.face : '40t',
+    arrowsPerEnd: DEFAULT_ARROWS_PER_END,
+    competition: { event: '', round: '', conditions: '' },
+  };
   const set = (patch) => ctx.ui.set({ setup: { ...setup, ...patch } });
+  // typing in a text field stores the draft without re-rendering, so the field keeps focus
+  const quiet = (patch) => ctx.ui.quietSet({ setup: Object.assign(setup, patch) });
   // a remembered distance that is not in the list (e.g. 90 m) steps from the nearest listed one
-  const distIndex = DISTANCES.reduce((best, d, i) => (Math.abs(d - setup.distance) < Math.abs(DISTANCES[best] - setup.distance) ? i : best), 0);
+  const distIndex = DISTANCES.reduce(
+    (best, d, i) => (Math.abs(d - setup.distance) < Math.abs(DISTANCES[best] - setup.distance) ? i : best),
+    0,
+  );
 
   const start = () => {
     // Only one session runs at a time: an in-progress session is finished (saved ends kept) or,
@@ -71,10 +135,15 @@ function renderSetup(ctx, active = null) {
         if (!ctx.save('sessions', L.finishSession(running))) return;
       } else if (!ctx.remove('sessions', running.id)) return;
     }
-    ctx.repo.saveSettings({ lastSetup: setup });
+    const { distance, face, arrowsPerEnd } = setup;
+    ctx.repo.saveSettings({ lastSetup: { distance, face, arrowsPerEnd } });
     const session = L.createSession({
       date: todayIso(),
-      ...setup,
+      type,
+      distance,
+      face,
+      arrowsPerEnd,
+      competition: type === 'competition' ? { ...setup.competition, placement: '' } : null,
       gear: { ...settings.gear },
       gearSnapshotId: settings.activeSnapshotId,
     });
@@ -82,21 +151,40 @@ function renderSetup(ctx, active = null) {
     if (ctx.save('sessions', session)) ctx.navigate('log');
   };
 
-  return {
-    content: h(
-      'div',
-      { class: 'stack' },
-      active
-        ? h(
-            'div',
-            { class: 'banner', role: 'status' },
-            h('span', null, T.inProgress(`${active.distance} m · ${faceLabel(active.face)}`, active.ends.length)),
-            h('a', { class: 'btn btn-primary btn-sm', href: '#/log' }, T.continueSession),
-          )
-        : null,
-      // One compact card so the whole setup fits on a phone screen without scrolling.
-      card(
-        { class: 'setup-card' },
+  const compField = (key, label, placeholder) =>
+    h(
+      'label',
+      { class: 'field' },
+      h('span', { class: 'field-label' }, label),
+      h('input', {
+        class: 'input',
+        value: setup.competition?.[key] || '',
+        placeholder,
+        autocomplete: 'off',
+        dataset: { fk: `comp-${key}` },
+        onInput: (e) => quiet({ competition: { ...setup.competition, [key]: e.target.value } }),
+      }),
+    );
+
+  // strength / mental: a form saved straight to History
+  const form = setup.forms?.[type] || emptyForm(type);
+  // the draft is read at call time: typing stores into `setup` without re-rendering
+  const currentForm = () => setup.forms?.[type] || emptyForm(type);
+  const changeForm = (update, { rerender = true } = {}) => {
+    const cur = currentForm();
+    const forms = { ...setup.forms, [type]: { ...cur, ...update(cur) } };
+    if (rerender) set({ forms });
+    else quiet({ forms });
+  };
+  const saveForm = () => {
+    const saved = ctx.save('sessions', { type, date: todayIso(), status: 'finished', ...currentForm() });
+    if (!saved) return;
+    ctx.ui.quietSet({ setup: { ...setup, forms: { ...setup.forms, [type]: null } } });
+    ctx.navigate(`history/${saved.id}`);
+  };
+
+  const body = isScored(type)
+    ? [
         h(
           'section',
           { class: 'setup-section', 'aria-labelledby': 'lbl-dist' },
@@ -120,7 +208,14 @@ function renderSetup(ctx, active = null) {
           h(
             'div',
             { class: 'grid-3' },
-            SETUP_FACES.map((f) => chip({ label: faceLabel(f), pressed: setup.face === f, fk: `face-${f}`, onClick: () => set({ face: f }) })),
+            SETUP_FACES.map((f) =>
+              chip({
+                label: faceLabel(f),
+                pressed: setup.face === f,
+                fk: `face-${f}`,
+                onClick: () => set({ face: f }),
+              }),
+            ),
           ),
         ),
         h(
@@ -136,8 +231,50 @@ function renderSetup(ctx, active = null) {
             onStep: (dir) => set({ arrowsPerEnd: setup.arrowsPerEnd + dir }),
           }),
         ),
+        type === 'competition'
+          ? h(
+              'section',
+              { class: 'setup-section', 'aria-label': 'Competition' },
+              sectionLabel('Competition'),
+              compField('event', 'Event', 'e.g. Indoor Cup Bratislava'),
+              h(
+                'div',
+                { class: 'grid-2' },
+                compField('round', 'Round', 'e.g. WA 18 m'),
+                compField('conditions', 'Conditions', 'hall, wind, light'),
+              ),
+            )
+          : null,
         h('button', { type: 'button', class: 'btn btn-primary btn-xl', onClick: start }, T.start),
+      ]
+    : [
+        ...formSections(type, form, changeForm),
+        h('button', { type: 'button', class: 'btn btn-primary btn-xl', onClick: saveForm }, 'Save session'),
+      ];
+
+  return {
+    content: h(
+      'div',
+      { class: 'stack' },
+      h(
+        'div',
+        { class: 'row align-center' },
+        h('a', { class: 'icon-btn', href: '#/new', 'aria-label': 'Back to session type' }, icons.back()),
+        h('h1', { class: 'page-title sm grow' }, `${TYPE_LABELS[type]} session`),
       ),
+      active && isScored(type)
+        ? h(
+            'div',
+            { class: 'banner', role: 'status' },
+            h(
+              'span',
+              null,
+              T.inProgress(`${active.distance} m · ${faceLabel(active.face)}`, active.ends.length),
+            ),
+            h('a', { class: 'btn btn-primary btn-sm', href: '#/log' }, T.continueSession),
+          )
+        : null,
+      card({ class: 'setup-card' }, body),
     ),
   };
 }
@@ -147,9 +284,29 @@ function stepper({ label, value, canDown, canUp, fk, onStep }) {
   return h(
     'div',
     { class: 'stepper', role: 'group' },
-    h('button', { type: 'button', 'aria-label': `Less ${label}`, disabled: !canDown, dataset: { fk: `${fk}-minus` }, onClick: () => onStep(-1) }, '−'),
+    h(
+      'button',
+      {
+        type: 'button',
+        'aria-label': `Less ${label}`,
+        disabled: !canDown,
+        dataset: { fk: `${fk}-minus` },
+        onClick: () => onStep(-1),
+      },
+      '−',
+    ),
     h('output', { 'aria-live': 'polite' }, value),
-    h('button', { type: 'button', 'aria-label': `More ${label}`, disabled: !canUp, dataset: { fk: `${fk}-plus` }, onClick: () => onStep(1) }, '+'),
+    h(
+      'button',
+      {
+        type: 'button',
+        'aria-label': `More ${label}`,
+        disabled: !canUp,
+        dataset: { fk: `${fk}-plus` },
+        onClick: () => onStep(1),
+      },
+      '+',
+    ),
   );
 }
 
@@ -169,7 +326,11 @@ function renderActive(ctx, session) {
   // --- slots
   const slots = h(
     'div',
-    { class: ['slots', current.arrows.length > 6 && 'slots-2col'], role: 'group', 'aria-label': 'Arrows in this end' },
+    {
+      class: ['slots', current.arrows.length > 6 && 'slots-2col'],
+      role: 'group',
+      'aria-label': 'Arrows in this end',
+    },
     current.arrows.map((a, i) => {
       const active = i === cursor;
       return h(
@@ -196,7 +357,13 @@ function renderActive(ctx, session) {
 
   const undoBtn = h(
     'button',
-    { type: 'button', class: 'icon-btn', 'aria-label': T.undo, dataset: { fk: 'undo' }, onClick: () => update(ctx, L.undo) },
+    {
+      type: 'button',
+      class: 'icon-btn',
+      'aria-label': T.undo,
+      dataset: { fk: 'undo' },
+      onClick: () => update(ctx, L.undo),
+    },
     icons.undo(),
   );
 
@@ -215,7 +382,18 @@ function renderActive(ctx, session) {
       h(
         'div',
         { class: 'end-nav' },
-        h('button', { type: 'button', class: 'icon-btn', 'aria-label': T.prevEnd, disabled: !L.canPrevEnd(session), dataset: { fk: 'end-prev' }, onClick: () => update(ctx, L.prevEnd) }, icons.back()),
+        h(
+          'button',
+          {
+            type: 'button',
+            class: 'icon-btn',
+            'aria-label': T.prevEnd,
+            disabled: !L.canPrevEnd(session),
+            dataset: { fk: 'end-prev' },
+            onClick: () => update(ctx, L.prevEnd),
+          },
+          icons.back(),
+        ),
         h(
           'h2',
           { class: 'end-title' },
@@ -235,11 +413,7 @@ function renderActive(ctx, session) {
           icons.forward(),
         ),
       ),
-      h(
-        'div',
-        { class: 'end-totals' },
-        undoBtn,
-      ),
+      h('div', { class: 'end-totals' }, undoBtn),
     ),
     input,
     grades,
@@ -254,9 +428,27 @@ function renderActive(ctx, session) {
       h(
         'div',
         { class: 'stepper', role: 'group', 'aria-labelledby': `lbl-${key}` },
-        h('button', { type: 'button', 'aria-label': `Fewer ${label.toLowerCase()}`, dataset: { fk: `${key}-minus` }, onClick: () => update(ctx, (c) => L.bump(c, key, -1)) }, '−'),
+        h(
+          'button',
+          {
+            type: 'button',
+            'aria-label': `Fewer ${label.toLowerCase()}`,
+            dataset: { fk: `${key}-minus` },
+            onClick: () => update(ctx, (c) => L.bump(c, key, -1)),
+          },
+          '−',
+        ),
         h('output', { 'aria-live': 'polite' }, String(current[key])),
-        h('button', { type: 'button', 'aria-label': `More ${label.toLowerCase()}`, dataset: { fk: `${key}-plus` }, onClick: () => update(ctx, (c) => L.bump(c, key, 1)) }, '+'),
+        h(
+          'button',
+          {
+            type: 'button',
+            'aria-label': `More ${label.toLowerCase()}`,
+            dataset: { fk: `${key}-plus` },
+            onClick: () => update(ctx, (c) => L.bump(c, key, 1)),
+          },
+          '+',
+        ),
       ),
     );
 
@@ -296,13 +488,32 @@ function renderActive(ctx, session) {
       'div',
       { class: 'row' },
       viewing
-        ? h('button', { type: 'button', class: 'btn btn-primary grow-2', dataset: { fk: 'back-current' }, onClick: () => update(ctx, (c) => L.goToEnd(c, null)) }, T.backToEnd(totalEnds))
+        ? h(
+            'button',
+            {
+              type: 'button',
+              class: 'btn btn-primary grow-2',
+              dataset: { fk: 'back-current' },
+              onClick: () => update(ctx, (c) => L.goToEnd(c, null)),
+            },
+            T.backToEnd(totalEnds),
+          )
         : h(
             'button',
-            { type: 'button', class: 'btn btn-primary grow-2', disabled: !canSave, dataset: { fk: 'save-end' }, onClick: () => update(ctx, L.saveEnd) },
+            {
+              type: 'button',
+              class: 'btn btn-primary grow-2',
+              disabled: !canSave,
+              dataset: { fk: 'save-end' },
+              onClick: () => update(ctx, L.saveEnd),
+            },
             T.saveEnd(endNo),
           ),
-      h('button', { type: 'button', class: 'btn btn-outline grow-1', disabled: !canFinish, onClick: finish }, T.finish),
+      h(
+        'button',
+        { type: 'button', class: 'btn btn-outline grow-1', disabled: !canFinish, onClick: finish },
+        T.finish,
+      ),
     ),
   );
 
@@ -324,14 +535,23 @@ function renderActive(ctx, session) {
           'aria-current': session.view === i ? 'true' : null,
           onClick: () => update(ctx, (c) => L.goToEnd(c, i)),
         },
-      h('span', { class: 'saved-end-no' }, `E${i + 1}`),
-      h(
-        'div',
-        { class: 'saved-end-body' },
-        h('div', { class: 'saved-end-arrows' }, e.arrows.map((a) => (a.v == null ? '–' : String(a.v))).join('  ')),
-        h('div', { class: 'muted small' }, `M ${fmt(st.avgM)} · S ${fmt(st.avgS)} · LD ${e.cld}/${e.ld}`),
-      ),
-      h('div', { class: 'saved-end-score' }, h('strong', null, String(sc)), h('span', { class: 'muted xsmall' }, `Σ ${run}`)),
+        h('span', { class: 'saved-end-no' }, `E${i + 1}`),
+        h(
+          'div',
+          { class: 'saved-end-body' },
+          h(
+            'div',
+            { class: 'saved-end-arrows' },
+            e.arrows.map((a) => (a.v == null ? '–' : String(a.v))).join('  '),
+          ),
+          h('div', { class: 'muted small' }, `M ${fmt(st.avgM)} · S ${fmt(st.avgS)} · LD ${e.cld}/${e.ld}`),
+        ),
+        h(
+          'div',
+          { class: 'saved-end-score' },
+          h('strong', null, String(sc)),
+          h('span', { class: 'muted xsmall' }, `Σ ${run}`),
+        ),
       ),
     );
   });
@@ -339,7 +559,15 @@ function renderActive(ctx, session) {
   // Distance, face and arrows/end are already in the header subtitle; only the sight mark is shown here.
   const pills =
     sight && (sight.elevation || sight.windage)
-      ? h('div', { class: 'pills' }, h('span', { class: 'pill pill-accent' }, `Sight ${[sight.elevation, sight.windage].filter(Boolean).join(' / ')}`))
+      ? h(
+          'div',
+          { class: 'pills' },
+          h(
+            'span',
+            { class: 'pill pill-accent' },
+            `Sight ${[sight.elevation, sight.windage].filter(Boolean).join(' / ')}`,
+          ),
+        )
       : null;
 
   return {
@@ -349,7 +577,12 @@ function renderActive(ctx, session) {
       pills,
       endCard,
       details,
-      rows.length ? card({ class: 'card-list', 'aria-label': 'Saved ends' }, h('ol', { class: 'saved-ends', reversed: true }, rows.reverse())) : null,
+      rows.length
+        ? card(
+            { class: 'card-list', 'aria-label': 'Saved ends' },
+            h('ol', { class: 'saved-ends', reversed: true }, rows.reverse()),
+          )
+        : null,
       h('button', { type: 'button', class: 'btn btn-text danger', onClick: discard }, T.discardSession),
     ),
   };
@@ -365,19 +598,44 @@ const LOUPE_SPAN = 24; // viewBox units shown in the magnifier (the face is 202 
 
 function arrowDots(session) {
   const at = (a) => sheetPoint(a, session.face);
-  const prev = L.otherEnds(session).flatMap((e) => e.arrows).filter((a) => a.x != null);
-  const cur = L.shownEnd(session).arrows.map((a, i) => ({ a, i })).filter(({ a }) => a.x != null);
+  const prev = L.otherEnds(session)
+    .flatMap((e) => e.arrows)
+    .filter((a) => a.x != null);
+  const cur = L.shownEnd(session)
+    .arrows.map((a, i) => ({ a, i }))
+    .filter(({ a }) => a.x != null);
   const movingIdx = L.isEditing(session) ? session.cursor : -1;
   return [
-    ...prev.map((a) => s('circle', { cx: at(a).x, cy: at(a).y, r: 3.2, fill: 'rgba(20,24,28,0.6)', stroke: '#FFFFFF', 'stroke-width': 1.2 })),
+    ...prev.map((a) =>
+      s('circle', {
+        cx: at(a).x,
+        cy: at(a).y,
+        r: 3.2,
+        fill: 'rgba(20,24,28,0.6)',
+        stroke: '#FFFFFF',
+        'stroke-width': 1.2,
+      }),
+    ),
     ...cur.map(({ a, i }) =>
       s(
         'g',
         { transform: `translate(${at(a).x} ${at(a).y})`, opacity: i === movingIdx ? 0.55 : null },
         // the arrow being moved gets a dashed ring so you can see which one will change
-        i === movingIdx ? s('circle', { r: 10, fill: 'none', stroke: '#E5007E', 'stroke-width': 1.4, 'stroke-dasharray': '2.5 2' }) : null,
+        i === movingIdx
+          ? s('circle', {
+              r: 10,
+              fill: 'none',
+              stroke: '#E5007E',
+              'stroke-width': 1.4,
+              'stroke-dasharray': '2.5 2',
+            })
+          : null,
         s('circle', { r: 6.4, fill: '#E5007E', stroke: '#FFFFFF', 'stroke-width': 1.3 }),
-        s('text', { y: 2.3, 'text-anchor': 'middle', 'font-size': 6.5, 'font-weight': 700, fill: '#FFFFFF' }, String(i + 1)),
+        s(
+          'text',
+          { y: 2.3, 'text-anchor': 'middle', 'font-size': 6.5, 'font-weight': 700, fill: '#FFFFFF' },
+          String(i + 1),
+        ),
       ),
     ),
   ];
@@ -394,20 +652,37 @@ function targetInput(session, enter, slots) {
     'g',
     null,
     s('circle', { r: 1.1, fill: '#E5007E', stroke: '#FFFFFF', 'stroke-width': 0.4 }),
-    s('path', { d: 'M-4 0h2.4M1.6 0h2.4M0 -4v2.4M0 1.6v2.4', stroke: '#E5007E', 'stroke-width': 0.45, 'stroke-linecap': 'round' }),
+    s('path', {
+      d: 'M-4 0h2.4M1.6 0h2.4M0 -4v2.4M0 1.6v2.4',
+      stroke: '#E5007E',
+      'stroke-width': 0.45,
+      'stroke-linecap': 'round',
+    }),
   );
-  const loupeSvg = s('svg', { 'aria-hidden': 'true', focusable: 'false' }, faceSheet(session.face), arrowDots(session), marker);
+  const loupeSvg = s(
+    'svg',
+    { 'aria-hidden': 'true', focusable: 'false' },
+    faceSheet(session.face),
+    arrowDots(session),
+    marker,
+  );
   const loupeScore = h('span', { class: 'score-chip loupe-score' });
   const loupe = h('div', { class: 'loupe', 'aria-hidden': 'true', hidden: true }, loupeSvg, loupeScore);
 
   let active = null; // { id, p } with p in sheet coordinates (one spot's radius = 1)
-  const sheet = s('svg', { viewBox: faceViewBox(session.face), 'aria-hidden': 'true', focusable: 'false' }, faceSheet(session.face), arrowDots(session));
+  const sheet = s(
+    'svg',
+    { viewBox: faceViewBox(session.face), 'aria-hidden': 'true', focusable: 'false' },
+    faceSheet(session.face),
+    arrowDots(session),
+  );
   const btn = h(
     'button',
     {
       type: 'button',
       class: ['target-btn', isMultiSpot(session.face) && 'target-sheet'],
-      'aria-label': 'Target face: touch where the arrow landed, slide to fine-tune, release to score (keyboard users: use Keypad)',
+      'aria-label':
+        'Target face: touch where the arrow landed, slide to fine-tune, release to score (keyboard users: use Keypad)',
     },
     sheet,
   );
@@ -450,7 +725,10 @@ function targetInput(session, enter, slots) {
   const show = (p) => {
     const cx = p.x * 100;
     const cy = p.y * 100;
-    loupeSvg.setAttribute('viewBox', `${cx - LOUPE_SPAN / 2} ${cy - LOUPE_SPAN / 2} ${LOUPE_SPAN} ${LOUPE_SPAN}`);
+    loupeSvg.setAttribute(
+      'viewBox',
+      `${cx - LOUPE_SPAN / 2} ${cy - LOUPE_SPAN / 2} ${LOUPE_SPAN} ${LOUPE_SPAN}`,
+    );
     marker.setAttribute('transform', `translate(${cx} ${cy})`);
     const hit = locateOnSheet(p.x, p.y, session.face);
     const v = scoreFromPoint(hit.x, hit.y, session.face);
@@ -469,7 +747,12 @@ function targetInput(session, enter, slots) {
     if (!commit) return;
     const hit = locateOnSheet(p.x, p.y, session.face);
     const keep = Math.hypot(hit.x, hit.y) < 1.05;
-    enter(scoreFromPoint(hit.x, hit.y, session.face), keep ? round3(hit.x) : null, keep ? round3(hit.y) : null, hit.spot);
+    enter(
+      scoreFromPoint(hit.x, hit.y, session.face),
+      keep ? round3(hit.x) : null,
+      keep ? round3(hit.y) : null,
+      hit.spot,
+    );
   };
 
   btn.addEventListener('pointerdown', (ev) => {
@@ -497,7 +780,12 @@ function targetInput(session, enter, slots) {
     'div',
     { class: 'target-wrap' },
     // arrow slots in a column on the left, target face on the right
-    h('div', { class: ['aim-row', session.arrowsPerEnd > 6 && 'aim-row-wide'] }, slots, h('div', { class: 'target-stage' }, btn, loupe)),
+    h(
+      'div',
+      { class: ['aim-row', session.arrowsPerEnd > 6 && 'aim-row-wide'] },
+      slots,
+      h('div', { class: 'target-stage' }, btn, loupe),
+    ),
     h(
       'div',
       { class: 'quick-keys', role: 'group', 'aria-label': 'Quick score without position' },
@@ -547,10 +835,5 @@ function gradePanel(session, { onGrade }) {
         ),
       ),
     );
-  return h(
-    'div',
-    { class: 'grade-panel' },
-    row('m', 'M', T.mentalProgram),
-    row('s', 'S', T.shootingCycle),
-  );
+  return h('div', { class: 'grade-panel' }, row('m', 'M', T.mentalProgram), row('s', 'S', T.shootingCycle));
 }

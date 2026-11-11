@@ -1,17 +1,7 @@
 // Sights tab: sight marks per distance + competition log (HANDOFF §8).
-import { h, formatDate, todayIso } from '../../core/dom.js';
+import { h, formatDate } from '../../core/dom.js';
 import { T } from '../strings.js';
 import { card } from './common.js';
-
-const COMP_FIELDS = [
-  ['date', 'Date', '', 'date'],
-  ['event', 'Event', '', 'text'],
-  ['round', 'Round', 'e.g. 70 m round', 'text'],
-  ['score', 'Score', '', 'text'],
-  ['sightMark', 'Sight mark used', '', 'text'],
-  ['conditions', 'Conditions', 'wind, light', 'text'],
-  ['note', 'Notes', '', 'text'],
-];
 
 const isBlank = (m) => !(m.distance.trim() || m.elevation.trim() || m.windage.trim() || m.note.trim());
 
@@ -37,24 +27,10 @@ export function renderSights(ctx) {
     }
   };
 
-  const draft = ui.compDraft || { date: todayIso() };
+  // New competitions are logged as Competition sessions; entries from the old list stay visible here.
   const comps = ctx.repo.list('competitions', {
     sort: (a, b) => (b.date || '').localeCompare(a.date || '') || b.createdAt.localeCompare(a.createdAt),
   });
-  const compError = h('p', { class: 'error small', role: 'alert' });
-
-  const addComp = (e) => {
-    e.preventDefault();
-    const record = Object.fromEntries(COMP_FIELDS.map(([k]) => [k, (draft[k] || '').trim()]));
-    if (!(record.event || record.score || record.date)) {
-      compError.textContent = T.compNeedsField;
-      return;
-    }
-    if (ctx.save('competitions', record)) {
-      ctx.ui.quietSet({ compDraft: null });
-      ctx.rerender();
-    }
-  };
 
   return {
     content: h(
@@ -78,35 +54,8 @@ export function renderSights(ctx) {
         h('button', { type: 'button', class: 'btn btn-dashed', onClick: addRow }, T.addDistance),
         h('p', { class: 'muted xsmall' }, 'Clear every field of a row to remove it.'),
       ),
-      h('h2', { class: 'page-title sm' }, T.competitionLog),
-      card(
-        null,
-        h(
-          'form',
-          { class: 'stack-sm', onSubmit: addComp },
-          COMP_FIELDS.map(([key, label, ph, type]) =>
-            h(
-              'div',
-              { class: 'form-row wide' },
-              h('label', { for: `c-${key}` }, label),
-              h('input', {
-                id: `c-${key}`,
-                class: 'input',
-                type,
-                value: draft[key] || '',
-                placeholder: ph,
-                autocomplete: 'off',
-                onInput: (e) => {
-                  draft[key] = e.target.value;
-                  ctx.ui.quietSet({ compDraft: draft });
-                },
-              }),
-            ),
-          ),
-          compError,
-          h('button', { type: 'submit', class: 'btn btn-primary' }, T.addCompetition),
-        ),
-      ),
+      comps.length ? h('h2', { class: 'page-title sm' }, T.competitionLog) : null,
+      comps.length ? h('p', { class: 'muted small' }, 'Earlier entries. New competitions are logged as Competition sessions (Dashboard → New session).') : null,
       h(
         'ul',
         { class: 'plain-list stack-sm' },

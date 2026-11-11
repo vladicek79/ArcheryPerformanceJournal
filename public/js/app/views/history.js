@@ -6,6 +6,8 @@ import { T } from '../strings.js';
 import { icons } from '../icons.js';
 import { card } from './common.js';
 import { VB, faceRings, faceSheet, faceViewBox } from './face.js';
+import { TYPE_LABELS, isScored, sessionType, formSummary } from '../sessionTypes.js';
+import { formSections } from './sessionForms.js';
 
 const finished = (repo) =>
   repo.list('sessions', {
@@ -22,6 +24,25 @@ export function renderHistory(ctx, params) {
   return renderList(ctx);
 }
 
+const typeBadge = (ss) => h('span', { class: `type-badge type-${sessionType(ss)}` }, TYPE_LABELS[sessionType(ss)]);
+
+/** List card of a strength or mental session. */
+function formListCard(ss) {
+  const review = ss.review?.workOn?.trim();
+  return h(
+    'a',
+    { class: 'card session-card', href: `#/history/${encodeURIComponent(ss.id)}` },
+    h(
+      'div',
+      { class: 'spread' },
+      h('strong', null, formatDate(ss.date, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })),
+      typeBadge(ss),
+    ),
+    h('div', { class: 'muted small' }, formSummary(ss) || '—'),
+    review ? h('div', { class: 'small clamp-2' }, `Work on: ${review}`) : null,
+  );
+}
+
 function renderList(ctx) {
   const sessions = finished(ctx.repo);
   return {
@@ -34,6 +55,7 @@ function renderList(ctx) {
         'ul',
         { class: 'plain-list stack-sm' },
         sessions.map((ss) => {
+          if (!isScored(ss.type)) return h('li', null, formListCard(ss));
           const st = computeStats(ss.ends);
           return h(
             'li',
@@ -45,7 +67,12 @@ function renderList(ctx) {
                 'div',
                 { class: 'spread' },
                 h('strong', null, formatDate(ss.date, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })),
-                h('span', { class: 'muted small' }, `${ss.distance} m · ${faceLabel(ss.face)} · ${ss.ends.length} ends`),
+                typeBadge(ss),
+              ),
+              h(
+                'div',
+                { class: 'muted small' },
+                [ss.competition?.event, `${ss.distance} m · ${faceLabel(ss.face)} · ${ss.ends.length} ends`].filter(Boolean).join(' · '),
               ),
               h(
                 'div',
@@ -67,7 +94,69 @@ function renderList(ctx) {
   };
 }
 
+/** Strength / mental session: its form (editable, saved as you go), the review and delete. */
+function renderFormDetail(ctx, ss) {
+  const change = (update, { rerender = true } = {}) => {
+    const cur = ctx.repo.get('sessions', ss.id);
+    if (cur && ctx.save('sessions', { ...cur, ...update(cur) }) && rerender) ctx.rerender();
+  };
+  const del = () => {
+    if (!confirm(T.confirmDeleteSession)) return;
+    ctx.remove('sessions', ss.id);
+    ctx.navigate('history');
+  };
+  return {
+    content: h(
+      'div',
+      { class: 'stack' },
+      h(
+        'div',
+        { class: 'row align-center' },
+        h('a', { class: 'icon-btn', href: '#/history', 'aria-label': T.backToLog }, icons.back()),
+        h(
+          'div',
+          { class: 'grow' },
+          h('h1', { class: 'page-title sm' }, formatDate(ss.date, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })),
+          h('div', { class: 'muted small' }, `${TYPE_LABELS[ss.type]} session`),
+        ),
+      ),
+      card({ class: 'setup-card', 'aria-label': `${TYPE_LABELS[ss.type]} session` }, formSections(ss.type, ss, change)),
+      reviewCard(ctx, ss),
+      h('button', { type: 'button', class: 'btn btn-text danger', onClick: del }, T.deleteSession),
+    ),
+  };
+}
+
+/** Competition details, editable (placement is usually known only after the event). */
+function competitionCard(ctx, ss) {
+  const field = (key, label, placeholder) =>
+    h(
+      'label',
+      { class: 'field' },
+      h('span', { class: 'field-label' }, label),
+      h('input', {
+        class: 'input',
+        value: ss.competition?.[key] || '',
+        placeholder,
+        autocomplete: 'off',
+        dataset: { fk: `comp-${key}` },
+        onInput: (e) => {
+          const cur = ctx.repo.get('sessions', ss.id);
+          if (cur) ctx.save('sessions', { ...cur, competition: { event: '', round: '', conditions: '', placement: '', ...cur.competition, [key]: e.target.value } });
+        },
+      }),
+    );
+  return card(
+    { 'aria-labelledby': 'comp-title' },
+    h('h2', { class: 'card-title', id: 'comp-title' }, 'Competition'),
+    field('event', 'Event', 'Event name'),
+    h('div', { class: 'grid-2' }, field('round', 'Round', 'e.g. WA 18 m'), field('placement', 'Placement', 'e.g. 3rd of 24')),
+    field('conditions', 'Conditions', 'hall, wind, light'),
+  );
+}
+
 function renderDetail(ctx, ss) {
+  if (!isScored(ss.type)) return renderFormDetail(ctx, ss);
   const st = computeStats(ss.ends);
   const dateLbl = formatDate(ss.date);
   const snapshot = ss.gearSnapshotId ? ctx.repo.get('gearSnapshots', ss.gearSnapshotId) : null;
@@ -99,7 +188,7 @@ function renderDetail(ctx, ss) {
           'div',
           { class: 'grow' },
           h('h1', { class: 'page-title sm' }, formatDate(ss.date, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })),
-          h('div', { class: 'muted small' }, `${ss.distance} m · ${faceLabel(ss.face)} · ${st.arrows} arrows${snapshot ? ` · ${snapshot.name}` : ''}`),
+          h('div', { class: 'muted small' }, `${TYPE_LABELS[sessionType(ss)]} · ${ss.distance} m · ${faceLabel(ss.face)} · ${st.arrows} arrows${snapshot ? ` · ${snapshot.name}` : ''}`),
         ),
       ),
       h(
@@ -107,6 +196,7 @@ function renderDetail(ctx, ss) {
         { class: 'tiles' },
         tiles.map(([label, value]) => h('div', { class: 'tile' }, h('dt', null, label), h('dd', null, value))),
       ),
+      sessionType(ss) === 'competition' ? competitionCard(ctx, ss) : null,
       reviewCard(ctx, ss),
       sessionGroup(ss),
       card(

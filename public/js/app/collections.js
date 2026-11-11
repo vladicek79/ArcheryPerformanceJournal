@@ -1,5 +1,6 @@
 // What the app stores (ARCHITECTURE §6.4). The repository validates before every save and on import.
 import { FACE_IDS, ARROWS_PER_END_MAX, isValidArrowsPerEnd, isValidArrowValue } from './scoring.js';
+import { SESSION_TYPES, DRILL_IDS, MENTAL_TECHNIQUES, EFFORT_MAX, FOCUS_MAX, isScored } from './sessionTypes.js';
 
 const isStr = (v) => typeof v === 'string';
 const isGrade = (g) => g == null || (Number.isInteger(g) && g >= 1 && g <= 5);
@@ -30,17 +31,45 @@ function validateEnd(e, where, n, requireValues) {
   return errs;
 }
 
+const isOptInt = (n, min, max) => n == null || (Number.isInteger(n) && n >= min && n <= max);
+
+/** Strength and mental sessions: a saved form, never active. */
+function validateForm(r) {
+  const errs = [];
+  if (r.status !== 'finished') errs.push(`${r.type} sessions are saved as finished`);
+  if (!isOptInt(r.minutes, 0, 1440)) errs.push('invalid minutes');
+  if (r.note != null && !isStr(r.note)) errs.push('invalid note');
+  if (r.type === 'strength') {
+    if (!isOptInt(r.effort, 1, EFFORT_MAX)) errs.push('invalid effort');
+    if (!Array.isArray(r.drills)) errs.push('drills must be a list');
+    else
+      r.drills.forEach((d, i) => {
+        if (!d || !DRILL_IDS.includes(d.kind)) errs.push(`drill ${i + 1}: unknown drill`);
+        else if (!isOptInt(d.sets, 0, 999) || !isOptInt(d.reps, 0, 9999) || !isOptInt(d.holdSec, 0, 3600)) errs.push(`drill ${i + 1}: invalid numbers`);
+      });
+  } else {
+    if (!isOptInt(r.focus, 1, FOCUS_MAX)) errs.push('invalid focus');
+    if (!Array.isArray(r.techniques) || r.techniques.some((t) => !MENTAL_TECHNIQUES.includes(t))) errs.push('invalid techniques');
+  }
+  return errs;
+}
+
 export const collections = {
   sessions: {
-    defaults: () => ({ ends: [], status: 'active', gear: null, gearSnapshotId: null }),
+    defaults: () => ({ type: 'training', ends: [], status: 'active', gear: null, gearSnapshotId: null }),
     validate(r) {
       const errs = [];
       if (!/^\d{4}-\d{2}-\d{2}$/.test(r.date || '')) errs.push('date must be YYYY-MM-DD');
+      if (!SESSION_TYPES.includes(r.type)) errs.push('invalid session type');
+      if (!['active', 'finished'].includes(r.status)) errs.push('invalid status');
+      if (r.review != null && (typeof r.review !== 'object' || !isStr(r.review.good ?? '') || !isStr(r.review.workOn ?? ''))) errs.push('invalid review');
+      if (!isScored(r.type)) return [...errs, ...validateForm(r)];
+      if (r.competition != null && (typeof r.competition !== 'object' || ['event', 'round', 'conditions', 'placement'].some((k) => !isStr(r.competition[k] ?? '')))) {
+        errs.push('invalid competition details');
+      }
       if (!(Number.isFinite(r.distance) && r.distance > 0)) errs.push('invalid distance');
       if (!FACE_IDS.includes(r.face)) errs.push('invalid face');
       if (!isValidArrowsPerEnd(r.arrowsPerEnd)) errs.push(`arrows per end must be 1 to ${ARROWS_PER_END_MAX}`);
-      if (!['active', 'finished'].includes(r.status)) errs.push('invalid status');
-      if (r.review != null && (typeof r.review !== 'object' || !isStr(r.review.good ?? '') || !isStr(r.review.workOn ?? ''))) errs.push('invalid review');
       if (!Array.isArray(r.ends)) errs.push('ends must be a list');
       // ends may be partly scored (Next auto-saves an unfinished end)
       else r.ends.forEach((e, i) => errs.push(...validateEnd(e, `end ${i + 1}`, r.arrowsPerEnd, false)));

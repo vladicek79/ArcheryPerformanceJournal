@@ -45,6 +45,9 @@ const SHELL = [
   './js/app/views/history.js',
   './js/app/views/gear.js',
   './js/app/views/sights.js',
+  './js/app/views/dashboard.js',
+  './js/app/views/sessionForms.js',
+  './js/app/sessionTypes.js',
   './js/app/views/settings.js',
 ];
 

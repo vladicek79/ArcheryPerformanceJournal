@@ -2119,3 +2119,196 @@ button.saved-end {
 .main .banner {
   max-width: none;
 }
+
+/* ---------------------------------------------------------------- dashboard (gate to the features) */
+.hub-actions {
+  gap: 12px;
+}
+
+.hub-active {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hub-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.hub-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-height: 104px;
+  padding: 14px;
+  border-radius: 14px;
+  border: 0;
+  background: var(--ground);
+  color: var(--ink);
+  text-align: left;
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.hub-tile svg {
+  width: 26px;
+  height: 26px;
+  color: var(--accent);
+}
+
+.hub-tile-title {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.hub-tile-sub {
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.hub-tile:active {
+  transform: scale(0.98);
+}
+
+.hub-last {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.hub-workon p {
+  margin: 4px 0 0;
+  white-space: pre-wrap;
+}
+
+/* an odd last tile (Settings) spans the row */
+.hub-grid > :last-child:nth-child(odd) {
+  grid-column: span 2;
+  min-height: 0;
+}
+
+/* The app frame is pinned to the window, so the bottom tabs always sit on the bottom edge.
+   100dvh can be taller than the visible area in an installed (standalone) Android app, which
+   pushed the tab bar below the screen; a fixed frame always matches the window. */
+html,
+body {
+  overflow: hidden;
+}
+
+.app {
+  position: fixed;
+  inset: 0;
+  height: auto;
+}
+
+/* ---------------------------------------------------------------- session types */
+/* step 1 of New session: one row per type */
+.type-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.type-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 2px solid var(--border);
+  background: var(--surface);
+  color: var(--ink);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.type-option[aria-checked='true'] {
+  background: var(--ink);
+  color: var(--surface);
+  border-color: var(--ink);
+}
+
+.type-option-title {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.type-option-sub {
+  font-size: 13px;
+  opacity: 0.75;
+}
+
+.grid-5 {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.setup-card .grid-5 .chip {
+  min-height: 40px;
+}
+
+.setup-card .grid-3 .chip {
+  font-size: 14px;
+}
+
+.type-badge {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--ground);
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.type-badge.type-competition {
+  background: #b45309;
+  color: #ffffff;
+}
+
+.type-badge.type-strength {
+  background: #1d4ed8;
+  color: #ffffff;
+}
+
+.type-badge.type-mental {
+  background: #6d28d9;
+  color: #ffffff;
+}
+
+.drill-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--ground);
+}
+
+.input-suffix {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.input-suffix .input {
+  max-width: 120px;
+}
+
+.clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

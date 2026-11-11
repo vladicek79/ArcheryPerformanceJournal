@@ -11,6 +11,16 @@ export const migrations = [
       return { ...doc, meta: { ...(doc.meta || {}), settingsUpdatedAt: doc.meta?.settingsUpdatedAt ?? null } };
     },
   },
+  {
+    // v3: session types (training, competition, strength, mental). Every existing session is a
+    // training session. Older app versions refuse v3 data instead of dropping sessions they don't know.
+    from: 2,
+    to: 3,
+    up(doc) {
+      const sessions = (doc.collections?.sessions || []).map((s) => (s.deleted || s.type ? s : { ...s, type: 'training' }));
+      return { ...doc, collections: { ...(doc.collections || {}), sessions } };
+    },
+  },
 ];
 
 export class NewerVersionError extends Error {

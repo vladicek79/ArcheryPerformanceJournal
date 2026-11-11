@@ -26,6 +26,7 @@ import { T } from './app/strings.js';
 import { icons } from './app/icons.js';
 import { guideSheet } from './app/views/common.js';
 import { renderLog, renderNewSession, logSubtitle } from './app/views/log.js';
+import { renderDashboard } from './app/views/dashboard.js';
 import { renderHistory } from './app/views/history.js';
 import { renderGear } from './app/views/gear.js';
 import { renderSights } from './app/views/sights.js';
@@ -73,15 +74,15 @@ const sync = createSyncController({
 const ui = createState({ guide: false, toast: null, update: null });
 
 const TABS = [
-  ['new', T.tabs.dashboard, icons.dashboard],
+  ['home', T.tabs.dashboard, icons.dashboard],
   ['log', T.tabs.log, icons.log],
   ['history', T.tabs.history, icons.history],
   ['gear', T.tabs.gear, icons.gear],
   ['sights', T.tabs.sights, icons.sights],
 ];
-const VIEWS = { log: renderLog, new: renderNewSession, history: renderHistory, gear: renderGear, sights: renderSights, settings: renderSettings };
+const VIEWS = { home: renderDashboard, log: renderLog, new: renderNewSession, history: renderHistory, gear: renderGear, sights: renderSights, settings: renderSettings };
 
-let route = { name: 'new', params: [] };
+let route = { name: 'home', params: [] };
 let shell;
 let overlayClose = null;
 let lastOverlayKey = null;
@@ -102,13 +103,8 @@ function buildShell() {
   const header = h(
     'header',
     { class: 'app-header' },
+    // Grades and Settings are tiles on the Dashboard, the only page that shows this bar
     h('div', { class: 'brand' }, icons.logo(), h('div', null, h('div', { class: 'brand-title' }, T.appTitle), sub)),
-    h(
-      'div',
-      { class: 'header-actions' },
-      h('button', { type: 'button', class: 'header-btn', onClick: () => ui.set({ guide: true }) }, icons.help(), T.grades),
-      h('a', { class: 'header-btn icon-only', href: '#/settings', 'aria-label': T.settings }, icons.settings()),
-    ),
   );
   const overlay = h('div', { class: 'overlay-root' });
   const toast = h('div', { class: 'toast-root', role: 'status', 'aria-live': 'polite' });
@@ -121,7 +117,7 @@ function buildShell() {
 
 function renderNow({ scrollTop = false } = {}) {
   const focusKey = document.activeElement?.dataset?.fk;
-  const view = VIEWS[route.name] || renderNewSession;
+  const view = VIEWS[route.name] || renderDashboard;
   let result;
   try {
     result = view(ctx, route.params);
@@ -131,12 +127,13 @@ function renderNow({ scrollTop = false } = {}) {
   }
 
   // header + tabs
-  const subs = { log: logSubtitle(repo), new: T.sub.new, history: T.sub.history, gear: T.sub.gear, sights: T.sub.sights, settings: T.sub.settings };
+  const subs = { home: T.sub.home, log: logSubtitle(repo), new: T.sub.new, history: T.sub.history, gear: T.sub.gear, sights: T.sub.sights, settings: T.sub.settings };
   shell.sub.textContent = subs[route.name] || '';
   // The top bar (title, Grades, Settings) is shown only on the Dashboard tab, to save space elsewhere.
-  shell.header.hidden = route.name !== 'new';
+  shell.header.hidden = route.name !== 'home';
   for (const [name, el] of Object.entries(shell.tabButtons)) {
-    if (name === route.name) el.setAttribute('aria-current', 'page');
+    // the new-session setup is opened from the Dashboard, so the Dashboard tab stays marked
+    if (name === route.name || (name === 'home' && route.name === 'new')) el.setAttribute('aria-current', 'page');
     else el.removeAttribute('aria-current');
   }
 

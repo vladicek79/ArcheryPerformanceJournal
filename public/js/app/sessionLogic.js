@@ -13,8 +13,10 @@ export function emptyEnd(n) {
   return { arrows: Array.from({ length: n }, emptyArrow), ld: 0, cld: 0, note: '' };
 }
 
-export function createSession({ date, distance, face, arrowsPerEnd, gear = null, gearSnapshotId = null }) {
+export function createSession({ date, distance, face, arrowsPerEnd, gear = null, gearSnapshotId = null, type = 'training', competition = null }) {
   return {
+    type,
+    ...(type === 'competition' ? { competition: competition || { event: '', round: '', conditions: '', placement: '' } } : {}),
     date,
     distance,
     face,
