@@ -2440,12 +2440,16 @@ body {
   gap: 12px;
 }
 
-/* on a desktop the charts sit side by side as rounded cards; on a phone they run edge to edge like every card */
+/* charts run edge to edge like every card; on a desktop two sit side by side and together span the full width */
 @media (min-width: 900px) {
+  .main .chart-grid {
+    margin-left: -24px;
+    margin-right: -24px;
+    max-width: none;
+  }
   .main .chart-grid .card {
     margin-left: 0;
     margin-right: 0;
-    border-radius: 14px;
   }
 }
 
