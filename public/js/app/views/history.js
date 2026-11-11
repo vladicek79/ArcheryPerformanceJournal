@@ -39,7 +39,7 @@ function formListCard(ss) {
       typeBadge(ss),
     ),
     h('div', { class: 'muted small' }, formSummary(ss) || '—'),
-    review ? h('div', { class: 'small clamp-2' }, `Work on: ${review}`) : null,
+    review ? h('div', { class: 'small clamp-2' }, `Improve: ${review}`) : null,
   );
 }
 
@@ -275,7 +275,7 @@ function reviewCard(ctx, ss) {
         dataset: { fk: `review-${key}` },
         onInput: (e) => {
           const cur = ctx.repo.get('sessions', ss.id);
-          if (cur) ctx.save('sessions', { ...cur, review: { good: '', workOn: '', ...cur.review, [key]: e.target.value } });
+          if (cur) ctx.save('sessions', { ...cur, review: { good: '', workOn: '', how: '', ...cur.review, [key]: e.target.value } });
         },
       }),
     );
@@ -284,6 +284,7 @@ function reviewCard(ctx, ss) {
     h('h2', { class: 'card-title', id: 'review-title' }, T.review),
     field('good', T.reviewGood, T.reviewGoodPh),
     field('workOn', T.reviewWorkOn, T.reviewWorkOnPh),
+    field('how', T.reviewHow, T.reviewHowPh),
   );
 }
 

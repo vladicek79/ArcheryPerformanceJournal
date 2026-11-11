@@ -27,6 +27,7 @@ import { icons } from './app/icons.js';
 import { guideSheet } from './app/views/common.js';
 import { renderLog, renderNewSession, logSubtitle } from './app/views/log.js';
 import { renderDashboard } from './app/views/dashboard.js';
+import { renderInsights } from './app/views/insights.js';
 import { renderHistory } from './app/views/history.js';
 import { renderGear } from './app/views/gear.js';
 import { renderSights } from './app/views/sights.js';
@@ -77,10 +78,11 @@ const TABS = [
   ['home', T.tabs.dashboard, icons.dashboard],
   ['log', T.tabs.log, icons.log],
   ['history', T.tabs.history, icons.history],
+  ['insights', T.tabs.insights, icons.insights],
   ['gear', T.tabs.gear, icons.gear],
   ['sights', T.tabs.sights, icons.sights],
 ];
-const VIEWS = { home: renderDashboard, log: renderLog, new: renderNewSession, history: renderHistory, gear: renderGear, sights: renderSights, settings: renderSettings };
+const VIEWS = { home: renderDashboard, insights: renderInsights, log: renderLog, new: renderNewSession, history: renderHistory, gear: renderGear, sights: renderSights, settings: renderSettings };
 
 let route = { name: 'home', params: [] };
 let shell;
@@ -112,7 +114,7 @@ function buildShell() {
   const envBadge = APP_ENV === 'test' ? h('div', { class: 'env-badge', 'aria-label': 'Test environment' }, 'TEST') : null;
   const app = h('div', { class: ['app', APP_ENV === 'test' && 'env-test'] }, envBadge, header, banner, main, nav, overlay, toast);
   document.getElementById('app').replaceChildren(app);
-  return { header, sub, main, banner, nav, tabButtons, overlay, toast };
+  return { app, header, sub, main, banner, nav, tabButtons, overlay, toast };
 }
 
 function renderNow({ scrollTop = false } = {}) {
@@ -127,10 +129,12 @@ function renderNow({ scrollTop = false } = {}) {
   }
 
   // header + tabs
-  const subs = { home: T.sub.home, log: logSubtitle(repo), new: T.sub.new, history: T.sub.history, gear: T.sub.gear, sights: T.sub.sights, settings: T.sub.settings };
+  const subs = { home: T.sub.home, insights: T.sub.insights, log: logSubtitle(repo), new: T.sub.new, history: T.sub.history, gear: T.sub.gear, sights: T.sub.sights, settings: T.sub.settings };
   shell.sub.textContent = subs[route.name] || '';
   // The top bar (title, Grades, Settings) is shown only on the Dashboard tab, to save space elsewhere.
   shell.header.hidden = route.name !== 'home';
+  // Insights uses the full width of a desktop browser
+  shell.app.classList.toggle('app-wide', route.name === 'insights');
   for (const [name, el] of Object.entries(shell.tabButtons)) {
     // the new-session setup is opened from the Dashboard, so the Dashboard tab stays marked
     if (name === route.name || (name === 'home' && route.name === 'new')) el.setAttribute('aria-current', 'page');

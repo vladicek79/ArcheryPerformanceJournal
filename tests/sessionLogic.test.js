@@ -228,6 +228,8 @@ describe('performance review', () => {
   it('accepts a session with or without a review', () => {
     expect(collections.sessions.validate(finished())).toEqual([]);
     expect(collections.sessions.validate({ ...finished(), review: { good: 'Calm release', workOn: 'Follow-through' } })).toEqual([]);
+    expect(collections.sessions.validate({ ...finished(), review: { good: '', workOn: 'Follow-through', how: 'Hold the line' } })).toEqual([]);
+    expect(collections.sessions.validate({ ...finished(), review: { how: 3 } })).toContain('invalid review');
   });
 
   it('rejects a review that is not text', () => {

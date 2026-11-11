@@ -7,6 +7,7 @@ import { chip, sectionLabel } from './common.js';
 
 /** Empty strength / mental session fields. */
 export function emptyForm(type) {
+  if (type === 'blank') return { arrows: null, minutes: null, note: '' };
   return type === 'strength'
     ? { minutes: null, effort: null, drills: [], note: '' }
     : { minutes: null, focus: null, techniques: [] };
@@ -65,10 +66,58 @@ export function formSections(type, value, change) {
       ),
     );
 
+  const noteField = (placeholder) =>
+    h(
+      'label',
+      { class: 'field' },
+      h('span', { class: 'field-label' }, 'Note'),
+      h('textarea', {
+        rows: 3,
+        class: 'review-text',
+        value: value.note || '',
+        placeholder,
+        dataset: { fk: 'form-note' },
+        onInput: (e) => change(() => ({ note: e.target.value }), { rerender: false }),
+      }),
+    );
+
+  if (type === 'blank') {
+    // only the number of arrows: no score, no target face
+    return [
+      h(
+        'section',
+        { class: 'setup-section', 'aria-label': 'Arrows' },
+        numberField('Arrows shot', 'arrows', 'arrows'),
+        h(
+          'div',
+          { class: 'grid-4' },
+          [3, 6, 12, 30].map((n) =>
+            h(
+              'button',
+              {
+                type: 'button',
+                class: 'btn btn-outline btn-sm',
+                'aria-label': `Add ${n} arrows`,
+                dataset: { fk: `arrows-add-${n}` },
+                onClick: () => change((cur) => ({ arrows: (cur.arrows || 0) + n })),
+              },
+              `+${n}`,
+            ),
+          ),
+        ),
+      ),
+      numberField('Duration', 'minutes', 'minutes', { suffix: 'min' }),
+      noteField('What you worked on, how it felt…'),
+    ];
+  }
+
   if (type === 'strength') {
     const drills = value.drills || [];
     const setDrill = (i, patch, opts) =>
-      change((cur) => ({ drills: (cur.drills || []).map((d, j) => (j === i ? { ...d, ...patch } : d)) }), opts);
+      change(
+        (cur) => ({ drills: (cur.drills || []).map((d, j) => (j === i ? { ...d, ...patch } : d)) }),
+        opts,
+      );
     const drillInput = (i, d, key, label) =>
       h(
         'label',
@@ -138,19 +187,7 @@ export function formSections(type, value, change) {
       ),
       numberField('Duration', 'minutes', 'minutes', { suffix: 'min' }),
       scale(`Effort (1–${EFFORT_MAX})`, 'effort', EFFORT_MAX, 'effort'),
-      h(
-        'label',
-        { class: 'field' },
-        h('span', { class: 'field-label' }, 'Note'),
-        h('textarea', {
-          rows: 3,
-          class: 'review-text',
-          value: value.note || '',
-          placeholder: 'How it felt, what you changed…',
-          dataset: { fk: 'form-note' },
-          onInput: (e) => change(() => ({ note: e.target.value }), { rerender: false }),
-        }),
-      ),
+      noteField('How it felt, what you changed…'),
     ];
   }
 

@@ -21,6 +21,15 @@ export const migrations = [
       return { ...doc, collections: { ...(doc.collections || {}), sessions } };
     },
   },
+  {
+    // v4: the blank bale session type. The data is unchanged; the version tells older app versions
+    // (which would skip blank bale sessions on sync and so drop them from Drive) to refuse it.
+    from: 3,
+    to: 4,
+    up(doc) {
+      return { ...doc };
+    },
+  },
 ];
 
 export class NewerVersionError extends Error {

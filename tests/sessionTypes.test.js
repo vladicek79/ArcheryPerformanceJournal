@@ -67,6 +67,17 @@ describe('session types', () => {
   });
 });
 
+describe('blank bale', () => {
+  const blank = (extra = {}) => ({ type: 'blank', date: '2026-11-11', status: 'finished', arrows: 60, minutes: 40, note: '', ...extra });
+  it('is a form session that counts arrows without a score', () => {
+    expect(isScored('blank')).toBe(false);
+    expect(validate(blank())).toEqual([]);
+    expect(validate(blank({ arrows: null }))).toEqual([]);
+    expect(validate(blank({ arrows: -3 })).join()).toMatch(/arrow count/);
+    expect(formSummary(blank())).toBe('60 arrows · 40 min');
+  });
+});
+
 describe('schema v3 migration', () => {
   it('marks existing sessions as training and leaves deletion markers alone', () => {
     const v2 = {

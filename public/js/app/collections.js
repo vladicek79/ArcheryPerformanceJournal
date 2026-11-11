@@ -33,13 +33,15 @@ function validateEnd(e, where, n, requireValues) {
 
 const isOptInt = (n, min, max) => n == null || (Number.isInteger(n) && n >= min && n <= max);
 
-/** Strength and mental sessions: a saved form, never active. */
+/** Blank bale, strength and mental sessions: a saved form, never active. */
 function validateForm(r) {
   const errs = [];
   if (r.status !== 'finished') errs.push(`${r.type} sessions are saved as finished`);
   if (!isOptInt(r.minutes, 0, 1440)) errs.push('invalid minutes');
   if (r.note != null && !isStr(r.note)) errs.push('invalid note');
-  if (r.type === 'strength') {
+  if (r.type === 'blank') {
+    if (!isOptInt(r.arrows, 0, 10000)) errs.push('invalid arrow count');
+  } else if (r.type === 'strength') {
     if (!isOptInt(r.effort, 1, EFFORT_MAX)) errs.push('invalid effort');
     if (!Array.isArray(r.drills)) errs.push('drills must be a list');
     else
@@ -62,7 +64,7 @@ export const collections = {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(r.date || '')) errs.push('date must be YYYY-MM-DD');
       if (!SESSION_TYPES.includes(r.type)) errs.push('invalid session type');
       if (!['active', 'finished'].includes(r.status)) errs.push('invalid status');
-      if (r.review != null && (typeof r.review !== 'object' || !isStr(r.review.good ?? '') || !isStr(r.review.workOn ?? ''))) errs.push('invalid review');
+      if (r.review != null && (typeof r.review !== 'object' || !isStr(r.review.good ?? '') || !isStr(r.review.workOn ?? '') || !isStr(r.review.how ?? ''))) errs.push('invalid review');
       if (!isScored(r.type)) return [...errs, ...validateForm(r)];
       if (r.competition != null && (typeof r.competition !== 'object' || ['event', 'round', 'conditions', 'placement'].some((k) => !isStr(r.competition[k] ?? '')))) {
         errs.push('invalid competition details');

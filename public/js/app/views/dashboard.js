@@ -66,6 +66,7 @@ export function renderDashboard(ctx) {
         'History',
         `${finished.length} ${finished.length === 1 ? 'session' : 'sessions'}`,
       ),
+      tile({ href: '#/insights' }, icons.insights, 'Insights', 'Trends, reviews, training load'),
       tile({ href: '#/gear' }, icons.gear, 'Equipment', 'Bow setup & snapshots'),
       tile({ href: '#/sights' }, icons.sights, 'Sight marks', 'Marks & competitions'),
       tile({ onClick: () => ctx.ui.set({ guide: true }) }, icons.help, 'Grades', 'M / S grading guide'),
@@ -84,6 +85,7 @@ export function renderDashboard(ctx) {
     const scored = isScored(last.type);
     const st = scored ? computeStats(last.ends) : null;
     const workOn = last.review?.workOn?.trim();
+    const how = last.review?.how?.trim();
     lastCard = card(
       { 'aria-labelledby': 'last-title' },
       h(
@@ -122,9 +124,12 @@ export function renderDashboard(ctx) {
           ? h(
               'div',
               { class: 'hub-workon' },
-              h('div', { class: 'section-label' }, 'Work on'),
+              h('div', { class: 'section-label' }, 'To improve'),
               h('p', null, workOn),
             )
+          : null,
+        how
+          ? h('div', { class: 'hub-workon' }, h('div', { class: 'section-label' }, 'How'), h('p', null, how))
           : null,
       ),
     );

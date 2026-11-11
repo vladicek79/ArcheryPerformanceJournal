@@ -49,6 +49,7 @@ export function renderNewSession(ctx, params = []) {
 
 const TYPE_HINTS = {
   training: 'Score arrow by arrow with M / S grades',
+  blank: 'Count arrows at the blank bale, no score',
   competition: 'Scored like training, with event and placement',
   strength: 'SPT, holding and draw drills, effort',
   mental: 'Visualisation, breathing, shot routine…',

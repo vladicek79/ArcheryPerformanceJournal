@@ -48,6 +48,9 @@ const SHELL = [
   './js/app/views/dashboard.js',
   './js/app/views/sessionForms.js',
   './js/app/sessionTypes.js',
+  './js/app/insights.js',
+  './js/app/views/insights.js',
+  './js/app/views/charts.js',
   './js/app/views/settings.js',
 ];
 

@@ -9,7 +9,7 @@ import { createSyncService } from '../public/js/sync/syncService.js';
 import { createFakeDriveStore } from './fakeDriveStore.js';
 
 const APP = 'archery-performance-journal';
-const SCHEMA = 3;
+const SCHEMA = 4;
 let clock;
 const now = () => new Date(clock);
 const tick = (ms = 1000) => (clock += ms);
