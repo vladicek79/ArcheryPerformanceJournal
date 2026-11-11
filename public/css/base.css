@@ -2613,3 +2613,35 @@ body {
 .insights-controls .filter .input {
   background: var(--surface);
 }
+
+/* session timer on the Log (tap to pause / resume) */
+.end-totals {
+  align-items: center;
+}
+
+.timer-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.timer-btn.is-paused {
+  border-style: dashed;
+  color: var(--muted);
+}
+
+.timer-btn.is-paused .timer-value::after {
+  content: " paused";
+  font-size: 12px;
+  font-weight: 600;
+}

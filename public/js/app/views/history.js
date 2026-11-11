@@ -8,6 +8,7 @@ import { card } from './common.js';
 import { VB, faceRings, faceSheet, faceViewBox } from './face.js';
 import { TYPE_LABELS, isScored, sessionType, formSummary } from '../sessionTypes.js';
 import { formSections } from './sessionForms.js';
+import { formatDuration } from '../sessionLogic.js';
 
 const finished = (repo) =>
   repo.list('sessions', {
@@ -72,7 +73,13 @@ function renderList(ctx) {
               h(
                 'div',
                 { class: 'muted small' },
-                [ss.competition?.event, `${ss.distance} m · ${faceLabel(ss.face)} · ${ss.ends.length} ends`].filter(Boolean).join(' · '),
+                [
+                  ss.competition?.event,
+                  `${ss.distance} m · ${faceLabel(ss.face)} · ${ss.ends.length} ends`,
+                  ss.minutes != null ? formatDuration(ss.minutes) : '',
+                ]
+                  .filter(Boolean)
+                  .join(' · '),
               ),
               h(
                 'div',
@@ -188,7 +195,7 @@ function renderDetail(ctx, ss) {
           'div',
           { class: 'grow' },
           h('h1', { class: 'page-title sm' }, formatDate(ss.date, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })),
-          h('div', { class: 'muted small' }, `${TYPE_LABELS[sessionType(ss)]} · ${ss.distance} m · ${faceLabel(ss.face)} · ${st.arrows} arrows${snapshot ? ` · ${snapshot.name}` : ''}`),
+          h('div', { class: 'muted small' }, `${TYPE_LABELS[sessionType(ss)]} · ${ss.distance} m · ${faceLabel(ss.face)} · ${st.arrows} arrows${ss.minutes != null ? ` · ${formatDuration(ss.minutes)}` : ''}${snapshot ? ` · ${snapshot.name}` : ''}`),
         ),
       ),
       h(

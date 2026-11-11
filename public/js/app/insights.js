@@ -54,7 +54,8 @@ export function sessionRow(s) {
     avgM: st ? st.avgM : null,
     avgS: st ? st.avgS : null,
     programPct: st ? st.programPct : null,
-    minutes: scored ? null : (s.minutes ?? null),
+    // scored sessions get their minutes from the session timer
+    minutes: s.minutes ?? null,
   };
 }
 

@@ -311,6 +311,19 @@ function stepper({ label, value, canDown, canUp, fk, onStep }) {
   );
 }
 
+/** One ticker for the whole app: refreshes every visible session timer once a second. */
+let ticker = null;
+function startTimerTicker() {
+  if (ticker) return;
+  ticker = setInterval(() => {
+    for (const el of document.querySelectorAll('.timer-value')) {
+      const started = el.dataset.started;
+      const timer = { running: !!started, startedAt: started || null, elapsedMs: Number(el.dataset.elapsed) || 0 };
+      el.textContent = L.formatClock(L.timerElapsed(timer));
+    }
+  }, 1000);
+}
+
 // ---------------------------------------------------------------- active session
 
 function renderActive(ctx, session) {
@@ -370,6 +383,31 @@ function renderActive(ctx, session) {
 
   const input = targetInput(session, enter, slots);
 
+  // session timer: tap to pause / resume; the shown time is refreshed every second by the ticker
+  const timer = session.timer;
+  const timerBtn = timer
+    ? h(
+        'button',
+        {
+          type: 'button',
+          class: ['timer-btn', !timer.running && 'is-paused'],
+          'aria-label': timer.running ? 'Pause the session timer' : 'Resume the session timer',
+          dataset: { fk: 'timer' },
+          onClick: () => update(ctx, (c) => (c.timer?.running ? L.pauseTimer(c) : L.resumeTimer(c))),
+        },
+        timer.running ? icons.pause() : icons.play(),
+        h(
+          'span',
+          {
+            class: 'timer-value',
+            dataset: { elapsed: String(timer.elapsedMs || 0), started: timer.running ? timer.startedAt : '' },
+          },
+          L.formatClock(L.timerElapsed(timer)),
+        ),
+      )
+    : null;
+  startTimerTicker();
+
   // Tapping an arrow on the left selects it: the next target touch / key replaces it, grades below apply to it;
   // tapping it again deselects it.
   const grades = gradePanel(session, { onGrade: (kind, g) => update(ctx, (c) => L.gradeArrow(c, kind, g)) });
@@ -414,7 +452,7 @@ function renderActive(ctx, session) {
           icons.forward(),
         ),
       ),
-      h('div', { class: 'end-totals' }, undoBtn),
+      h('div', { class: 'end-totals' }, timerBtn, undoBtn),
     ),
     input,
     grades,

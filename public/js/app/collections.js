@@ -75,6 +75,13 @@ export const collections = {
       if (!Array.isArray(r.ends)) errs.push('ends must be a list');
       // ends may be partly scored (Next auto-saves an unfinished end)
       else r.ends.forEach((e, i) => errs.push(...validateEnd(e, `end ${i + 1}`, r.arrowsPerEnd, false)));
+      if (!isOptInt(r.minutes, 0, 1440)) errs.push('invalid minutes');
+      if (r.timer != null) {
+        const tm = r.timer;
+        if (typeof tm !== 'object' || typeof tm.running !== 'boolean' || !(Number.isFinite(tm.elapsedMs) && tm.elapsedMs >= 0))
+          errs.push('invalid timer');
+        else if (tm.running && Number.isNaN(Date.parse(tm.startedAt))) errs.push('invalid timer start');
+      }
       if (r.status === 'active') {
         errs.push(...validateEnd(r.current, 'current end', r.arrowsPerEnd, false));
         if (!(Number.isInteger(r.cursor) && r.cursor >= 0 && r.cursor < r.arrowsPerEnd)) errs.push('invalid cursor');

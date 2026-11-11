@@ -264,3 +264,42 @@ describe('three-spot sheets', () => {
     expect(collections.sessions.validate({ ...t, id: 'a' }).join()).toMatch(/invalid spot/);
   });
 });
+
+describe('session timer', () => {
+  const t0 = new Date('2026-11-12T10:00:00Z');
+  const at = (min) => new Date(t0.getTime() + min * 60000);
+  const start = () => L.createSession({ date: '2026-11-12', distance: 18, face: '40t', arrowsPerEnd: 3, now: t0 });
+
+  it('starts running with the session and counts from its start time', () => {
+    const s = start();
+    expect(s.timer).toEqual({ running: true, startedAt: t0.toISOString(), elapsedMs: 0 });
+    expect(L.timerElapsed(s.timer, at(12.5))).toBe(12.5 * 60000);
+    expect(collections.sessions.validate({ ...s, id: 'a' })).toEqual([]);
+  });
+
+  it('stops counting while paused and continues after resume', () => {
+    let s = L.pauseTimer(start(), at(10));
+    expect(s.timer).toEqual({ running: false, startedAt: null, elapsedMs: 10 * 60000 });
+    expect(L.timerElapsed(s.timer, at(50))).toBe(10 * 60000);
+    s = L.resumeTimer(s, at(50));
+    expect(L.timerElapsed(s.timer, at(55))).toBe(15 * 60000);
+    expect(L.pauseTimer(L.pauseTimer(s, at(60)), at(70)).timer.elapsedMs).toBe(20 * 60000);
+  });
+
+  it('saves the time as whole minutes when the session is finished', () => {
+    let s = L.enterScore(start(), 10);
+    s = L.pauseTimer(s, at(20));
+    s = L.resumeTimer(s, at(30));
+    const done = L.finishSession(s, at(55.4));
+    expect(done.minutes).toBe(45);
+    expect(done.timer).toBeUndefined();
+    expect(collections.sessions.validate({ ...done, id: 'a' })).toEqual([]);
+  });
+
+  it('formats the clock and the duration', () => {
+    expect(L.formatClock(65 * 1000)).toBe('1:05');
+    expect(L.formatClock((3600 + 125) * 1000)).toBe('1:02:05');
+    expect(L.formatDuration(45)).toBe('45 min');
+    expect(L.formatDuration(125)).toBe('2 h 05 min');
+  });
+});

@@ -13,7 +13,17 @@ export function emptyEnd(n) {
   return { arrows: Array.from({ length: n }, emptyArrow), ld: 0, cld: 0, note: '' };
 }
 
-export function createSession({ date, distance, face, arrowsPerEnd, gear = null, gearSnapshotId = null, type = 'training', competition = null }) {
+export function createSession({
+  date,
+  distance,
+  face,
+  arrowsPerEnd,
+  gear = null,
+  gearSnapshotId = null,
+  type = 'training',
+  competition = null,
+  now = new Date(),
+}) {
   return {
     type,
     ...(type === 'competition' ? { competition: competition || { event: '', round: '', conditions: '', placement: '' } } : {}),
@@ -29,10 +39,50 @@ export function createSession({ date, distance, face, arrowsPerEnd, gear = null,
     pinned: false,
     gear,
     gearSnapshotId,
+    // the timer runs from the start; it keeps counting while the app is closed (it is a start time,
+    // not a ticking counter) until it is paused
+    timer: { running: true, startedAt: now.toISOString(), elapsedMs: 0 },
   };
 }
 
 const clone = (s) => structuredClone(s);
+
+// ---------------------------------------------------------------- session timer
+
+/** Milliseconds on the timer at `now` (sessions from before the timer existed have none: 0). */
+export function timerElapsed(timer, now = new Date()) {
+  if (!timer) return 0;
+  const running = timer.running && timer.startedAt ? Math.max(0, now.getTime() - Date.parse(timer.startedAt)) : 0;
+  return (timer.elapsedMs || 0) + running;
+}
+
+export function pauseTimer(session, now = new Date()) {
+  if (!session.timer?.running) return session;
+  return { ...session, timer: { running: false, startedAt: null, elapsedMs: timerElapsed(session.timer, now) } };
+}
+
+export function resumeTimer(session, now = new Date()) {
+  if (session.timer?.running) return session;
+  return { ...session, timer: { running: true, startedAt: now.toISOString(), elapsedMs: session.timer?.elapsedMs || 0 } };
+}
+
+/** "12:05" or "1:02:05". */
+export function formatClock(ms) {
+  const sec = Math.floor(ms / 1000);
+  const hh = Math.floor(sec / 3600);
+  const mm = Math.floor((sec % 3600) / 60);
+  const ss = sec % 60;
+  const p = (n) => String(n).padStart(2, '0');
+  return hh ? `${hh}:${p(mm)}:${p(ss)}` : `${mm}:${p(ss)}`;
+}
+
+/** "45 min" or "1 h 05 min". */
+export function formatDuration(minutes) {
+  if (minutes == null) return '–';
+  const hh = Math.floor(minutes / 60);
+  const mm = minutes % 60;
+  return hh ? `${hh} h ${String(mm).padStart(2, '0')} min` : `${mm} min`;
+}
 
 export function nextEmpty(arrows) {
   return arrows.findIndex((a) => a.v == null);
@@ -232,9 +282,12 @@ export function canFinish(session) {
  * Turn the active session into a finished one. The current end is kept when it has arrows;
  * empty ends and UI fields (including asking/step/inputMode left by older app versions) are dropped.
  */
-export function finishSession(session) {
+export function finishSession(session, now = new Date()) {
   if (!canFinish(session)) return session;
-  const { current, view: _v, cursor: _cu, pinned: _p, asking: _a, step: _st, inputMode: _im, ...rest } = clone(session);
+  const { current, view: _v, cursor: _cu, pinned: _p, asking: _a, step: _st, inputMode: _im, timer, ...rest } =
+    clone(session);
   const ends = [...rest.ends, current].filter(hasArrows);
-  return { ...rest, ends, status: 'finished' };
+  // the timer becomes the session's duration in whole minutes (sessions without a timer keep none)
+  const minutes = timer ? Math.round(timerElapsed(timer, now) / 60000) : (rest.minutes ?? null);
+  return { ...rest, ends, status: 'finished', ...(minutes != null ? { minutes } : {}) };
 }
