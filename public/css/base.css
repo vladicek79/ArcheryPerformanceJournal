@@ -2603,3 +2603,13 @@ body {
     align-items: start;
   }
 }
+
+/* Insights: the view switch sits on the band, so it uses the page ground colour */
+.insights-controls .segmented {
+  background: var(--ground);
+}
+
+.insights-controls .range-btn:not([aria-pressed='true']),
+.insights-controls .filter .input {
+  background: var(--surface);
+}

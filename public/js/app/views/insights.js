@@ -65,18 +65,22 @@ export function renderInsights(ctx, params) {
         h('h1', { class: 'page-title' }, 'Insights'),
         h('span', { class: 'muted small' }, `${sessions.length} sessions`),
       ),
-      h(
-        'nav',
-        { class: 'segmented', 'aria-label': 'Insights views' },
-        VIEWS.map(([id, label]) =>
-          h(
-            'a',
-            { href: `#/insights/${id}`, class: 'seg', 'aria-current': view === id ? 'page' : null },
-            label,
+      // view switch and filters share one edge-to-edge band, aligned with the cards below
+      card(
+        { class: 'insights-controls' },
+        h(
+          'nav',
+          { class: 'segmented', 'aria-label': 'Insights views' },
+          VIEWS.map(([id, label]) =>
+            h(
+              'a',
+              { href: `#/insights/${id}`, class: 'seg', 'aria-current': view === id ? 'page' : null },
+              label,
+            ),
           ),
         ),
+        filters(all, f, setF),
       ),
-      filters(all, f, setF),
       body,
     ),
   };
