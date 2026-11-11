@@ -177,9 +177,30 @@ function renderSetup(ctx, type, active = null) {
     if (rerender) set({ forms });
     else quiet({ forms });
   };
+  // Blank bale / strength / mental: a timer starts when the form opens. It is kept in this device's
+  // settings (not synced), so it survives the app being closed, and fills in the duration on save.
+  const formTimers = settings.formTimers || {};
+  let formTimer = formTimers[type];
+  if (!isScored(type) && !formTimer) {
+    formTimer = { running: true, startedAt: new Date().toISOString(), elapsedMs: 0 };
+    ctx.repo.saveSettings({ formTimers: { ...formTimers, [type]: formTimer } });
+  }
+  const toggleFormTimer = () => {
+    const all = ctx.repo.getSettings().formTimers || {};
+    const cur = { timer: all[type] };
+    const next = cur.timer?.running ? L.pauseTimer(cur) : L.resumeTimer(cur);
+    ctx.saveSettings({ formTimers: { ...all, [type]: next.timer } });
+    ctx.rerender();
+  };
+
   const saveForm = () => {
-    const saved = ctx.save('sessions', { type, date: todayIso(), status: 'finished', ...currentForm() });
+    const fields = currentForm();
+    const all = ctx.repo.getSettings().formTimers || {};
+    // minutes typed by hand win over the timer
+    const minutes = fields.minutes ?? (all[type] ? Math.round(L.timerElapsed(all[type]) / 60000) : null);
+    const saved = ctx.save('sessions', { type, date: todayIso(), status: 'finished', ...fields, minutes });
     if (!saved) return;
+    ctx.repo.saveSettings({ formTimers: { ...all, [type]: null } });
     ctx.ui.quietSet({ setup: { ...setup, forms: { ...setup.forms, [type]: null } } });
     ctx.navigate(`history/${saved.id}`);
   };
@@ -249,6 +270,12 @@ function renderSetup(ctx, type, active = null) {
         h('button', { type: 'button', class: 'btn btn-primary btn-xl', onClick: start }, T.start),
       ]
     : [
+        h(
+          'div',
+          { class: 'spread align-center' },
+          h('span', { class: 'field-label' }, 'Timer'),
+          timerButton(formTimer, toggleFormTimer),
+        ),
         ...formSections(type, form, changeForm),
         h('button', { type: 'button', class: 'btn btn-primary btn-xl', onClick: saveForm }, 'Save session'),
       ];
@@ -307,6 +334,28 @@ function stepper({ label, value, canDown, canUp, fk, onStep }) {
         onClick: () => onStep(1),
       },
       '+',
+    ),
+  );
+}
+
+/** Timer button (tap to pause / resume). The shown time is refreshed every second by the ticker. */
+function timerButton(timer = null, onToggle) {
+  const tm = timer || { running: false, startedAt: null, elapsedMs: 0 };
+  startTimerTicker();
+  return h(
+    'button',
+    {
+      type: 'button',
+      class: ['timer-btn', !tm.running && 'is-paused'],
+      'aria-label': tm.running ? 'Pause the session timer' : 'Resume the session timer',
+      dataset: { fk: 'timer' },
+      onClick: onToggle,
+    },
+    tm.running ? icons.pause() : icons.play(),
+    h(
+      'span',
+      { class: 'timer-value', dataset: { elapsed: String(tm.elapsedMs || 0), started: tm.running ? tm.startedAt : '' } },
+      L.formatClock(L.timerElapsed(tm)),
     ),
   );
 }
@@ -383,30 +432,11 @@ function renderActive(ctx, session) {
 
   const input = targetInput(session, enter, slots);
 
-  // session timer: tap to pause / resume; the shown time is refreshed every second by the ticker
-  const timer = session.timer;
-  const timerBtn = timer
-    ? h(
-        'button',
-        {
-          type: 'button',
-          class: ['timer-btn', !timer.running && 'is-paused'],
-          'aria-label': timer.running ? 'Pause the session timer' : 'Resume the session timer',
-          dataset: { fk: 'timer' },
-          onClick: () => update(ctx, (c) => (c.timer?.running ? L.pauseTimer(c) : L.resumeTimer(c))),
-        },
-        timer.running ? icons.pause() : icons.play(),
-        h(
-          'span',
-          {
-            class: 'timer-value',
-            dataset: { elapsed: String(timer.elapsedMs || 0), started: timer.running ? timer.startedAt : '' },
-          },
-          L.formatClock(L.timerElapsed(timer)),
-        ),
-      )
-    : null;
-  startTimerTicker();
+  // session timer: tap to pause / resume
+  // sessions started before the timer existed show it stopped at 0:00; one tap starts it
+  const timerBtn = timerButton(session.timer, () =>
+    update(ctx, (c) => (c.timer?.running ? L.pauseTimer(c) : L.resumeTimer(c))),
+  );
 
   // Tapping an arrow on the left selects it: the next target touch / key replaces it, grades below apply to it;
   // tapping it again deselects it.
