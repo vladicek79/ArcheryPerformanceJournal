@@ -242,6 +242,7 @@ const router = createRouter((r) => {
   route = r;
   if (changed) ui.quietSet({ newSightIds: [], importPreview: null });
   renderNow({ scrollTop: changed });
+  if (changed && auth.configured && auth.isSignedIn() && !auth.getToken()) renewIfSafe();
 });
 
 function applyTheme() {
@@ -295,12 +296,40 @@ async function handleSignIn() {
   if (!auth.configured) return true;
   const result = auth.consumeRedirect((hash) => history.replaceState(null, '', `${location.pathname}${location.search}${hash}`));
   if (result.kind === 'error' && !result.silent) ui.quietSet({ signInError: result.error });
-  const silentFailed = result.kind === 'error' && result.silent;
-  if (auth.isSignedIn() && !auth.getToken() && navigator.onLine && !silentFailed && (await googleReachable())) {
+  silentFailed = result.kind === 'error' && result.silent;
+  if (await needsRenewal()) {
     auth.signIn({ silent: true });
     return false;
   }
   return true;
+}
+
+// a silent renewal that Google refused is not retried in this page's life (no redirect loop);
+// Settings then offers Reconnect
+let silentFailed = false;
+let renewing = false;
+
+async function needsRenewal() {
+  return auth.isSignedIn() && !auth.getToken() && navigator.onLine && !silentFailed && (await googleReachable());
+}
+
+/**
+ * An installed app is often resumed from the background rather than started again, so the token
+ * (about an hour) can expire while the app stays open. Renew it when the app comes back, but not
+ * while the redirect could lose work: the New session screen keeps its draft in memory, and a
+ * focused text field may be mid-edit. Called again on navigation, so leaving that screen renews.
+ */
+async function renewIfSafe() {
+  if (renewing || !auth.configured || document.visibilityState !== 'visible') return false;
+  if (route.name === 'new' || document.activeElement?.matches?.('input, textarea, select')) return false;
+  renewing = true;
+  try {
+    if (!(await needsRenewal())) return false;
+    auth.signIn({ silent: true });
+    return true;
+  } finally {
+    renewing = false;
+  }
 }
 
 function fatal(message) {
@@ -330,7 +359,11 @@ async function boot() {
     if (['save', 'remove', 'settings', 'import'].includes(c.type)) sync.schedule();
   });
   window.addEventListener('online', () => sync.request());
-  document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && sync.request());
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    // when no renewal happens (not safe, offline, refused) sync reports the expired sign-in as before
+    renewIfSafe().then((leaving) => leaving || sync.request());
+  });
   ui.subscribe(() => renderNow());
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && overlayClose) {
