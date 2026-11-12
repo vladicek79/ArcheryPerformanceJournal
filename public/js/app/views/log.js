@@ -19,7 +19,7 @@ import * as L from '../sessionLogic.js';
 import { T } from '../strings.js';
 import { icons } from '../icons.js';
 import { card, chip, sectionLabel, gearPicker } from './common.js';
-import { gearChoices, gearForChoice, gearSummary } from '../gearFields.js';
+import { gearChoices, gearForChoice } from '../gearFields.js';
 import { faceSheet, faceViewBox } from './face.js';
 import { SESSION_TYPES, TYPE_LABELS, isScored } from '../sessionTypes.js';
 import { emptyForm, formSections } from './sessionForms.js';
@@ -142,7 +142,6 @@ function renderSetup(ctx, type, active = null) {
           gearPicker({
             ...gearOpts,
             value: gearChoice,
-            summary: gearSummary(chosenGear().gear),
             onChange: (v) => set({ gear: v }),
           }),
         );
@@ -200,16 +199,18 @@ function renderSetup(ctx, type, active = null) {
   // Blank bale / strength / mental: a timer starts when the form opens. It is kept in this device's
   // settings (not synced), so it survives the app being closed, and fills in the duration on save.
   const formTimers = settings.formTimers || {};
+  // A timer left behind by a form that was opened but never saved starts again after some hours.
   let formTimer = formTimers[type];
-  if (!isScored(type) && !formTimer) {
-    formTimer = { running: true, startedAt: new Date().toISOString(), elapsedMs: 0 };
-    ctx.repo.saveSettings({ formTimers: { ...formTimers, [type]: formTimer } });
+  if (!isScored(type)) {
+    const opened = L.openFormTimer(formTimer);
+    if (opened !== formTimer) ctx.repo.saveSettings({ formTimers: { ...formTimers, [type]: opened } });
+    formTimer = opened;
   }
   const toggleFormTimer = () => {
     const all = ctx.repo.getSettings().formTimers || {};
     const cur = { timer: all[type] };
     const next = cur.timer?.running ? L.pauseTimer(cur) : L.resumeTimer(cur);
-    ctx.saveSettings({ formTimers: { ...all, [type]: next.timer } });
+    ctx.saveSettings({ formTimers: { ...all, [type]: { ...next.timer, touchedAt: new Date().toISOString() } } });
     ctx.rerender();
   };
 

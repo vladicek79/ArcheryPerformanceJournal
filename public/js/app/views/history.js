@@ -5,7 +5,7 @@ import { computeStats, sumArrows, fmt } from '../stats.js';
 import { T } from '../strings.js';
 import { icons } from '../icons.js';
 import { card, gearPicker } from './common.js';
-import { gearChoices, gearForChoice, gearSummary } from '../gearFields.js';
+import { gearChoices, gearForChoice } from '../gearFields.js';
 import { VB, faceRings, faceSheet, faceViewBox } from './face.js';
 import { TYPE_LABELS, isScored, sessionType, formSummary } from '../sessionTypes.js';
 import { formSections } from './sessionForms.js';
@@ -149,7 +149,7 @@ function gearCard(ctx, ss) {
   return card(
     { 'aria-labelledby': 'gear-title' },
     h('h2', { class: 'card-title', id: 'gear-title' }, 'Equipment'),
-    gearPicker({ ...choices, summary: gearSummary(ss.gear), onChange }),
+    gearPicker({ ...choices, onChange }),
   );
 }
 

@@ -56,6 +56,19 @@ export function timerElapsed(timer, now = new Date()) {
   return (timer.elapsedMs || 0) + running;
 }
 
+/** A form timer left behind (form opened but not saved) is dropped after this long without a touch. */
+export const FORM_TIMER_STALE_MS = 6 * 3600 * 1000;
+
+/**
+ * The timer for a blank bale / strength / mental form being opened: the kept one, or a fresh running
+ * timer when there is none or it was left untouched (not started, resumed or paused) for too long.
+ */
+export function openFormTimer(timer, now = new Date()) {
+  const touched = Date.parse(timer?.touchedAt || timer?.startedAt || '');
+  if (timer && Number.isFinite(touched) && now.getTime() - touched <= FORM_TIMER_STALE_MS) return timer;
+  return { running: true, startedAt: now.toISOString(), elapsedMs: 0, touchedAt: now.toISOString() };
+}
+
 export function pauseTimer(session, now = new Date()) {
   if (!session.timer?.running) return session;
   return { ...session, timer: { running: false, startedAt: null, elapsedMs: timerElapsed(session.timer, now) } };

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { gearChoices, gearForChoice, gearSummary } from '../public/js/app/gearFields.js';
+import { gearChoices, gearForChoice } from '../public/js/app/gearFields.js';
 
 const snapshots = [
   { id: 's1', name: 'Indoor', fields: { riser: 'Hoyt', limbsLbs: '32' } },
@@ -36,12 +36,5 @@ describe('gearForChoice', () => {
     expect(gearForChoice('current', ctx)).toEqual({ gear: { riser: 'Own' }, gearSnapshotId: null });
     expect(gearForChoice('none', ctx)).toEqual({ gear: null, gearSnapshotId: null });
     expect(gearForChoice('recorded', ctx)).toBeNull();
-  });
-});
-
-describe('gearSummary', () => {
-  it('names riser, limbs and arrows', () => {
-    expect(gearSummary({ riser: 'Hoyt', limbsModel: 'Formula', limbsLbs: '32', arrowModel: 'X10', spine: '650' })).toBe('Hoyt · Formula 32 lbs · X10 650');
-    expect(gearSummary(null)).toBe('');
   });
 });

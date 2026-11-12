@@ -303,3 +303,20 @@ describe('session timer', () => {
     expect(L.formatDuration(125)).toBe('2 h 05 min');
   });
 });
+
+describe('form timer (blank bale, strength, mental)', () => {
+  const now = new Date('2026-11-12T18:00:00Z');
+  it('keeps a timer touched within the last hours', () => {
+    const t = { running: true, startedAt: '2026-11-12T17:00:00Z', elapsedMs: 0 };
+    expect(L.openFormTimer(t, now)).toBe(t);
+    const paused = { running: false, startedAt: null, elapsedMs: 600000, touchedAt: '2026-11-12T16:30:00Z' };
+    expect(L.openFormTimer(paused, now)).toBe(paused);
+  });
+  it('starts again when a form was left unsaved for hours, or there is no timer', () => {
+    const left = { running: true, startedAt: '2026-11-12T00:00:00Z', elapsedMs: 0 };
+    expect(L.openFormTimer(left, now)).toEqual({ running: true, startedAt: now.toISOString(), elapsedMs: 0, touchedAt: now.toISOString() });
+    const oldPaused = { running: false, startedAt: null, elapsedMs: 600000, touchedAt: '2026-11-11T10:00:00Z' };
+    expect(L.timerElapsed(L.openFormTimer(oldPaused, now), now)).toBe(0);
+    expect(L.timerElapsed(L.openFormTimer(null, now), now)).toBe(0);
+  });
+});

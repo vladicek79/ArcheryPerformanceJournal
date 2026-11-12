@@ -89,17 +89,3 @@ export function gearForChoice(choice, { settings, snapshots }) {
   const sn = snapshots.find((x) => x.id === choice);
   return sn ? { gear: { ...sn.fields }, gearSnapshotId: sn.id } : null;
 }
-
-/** A short line naming the main equipment: riser, limbs, arrows. */
-export function gearSummary(gear) {
-  if (!gear) return '';
-  const v = (k) => String(gear[k] ?? '').trim();
-  const join = (...xs) => xs.filter(Boolean).join(' ');
-  return [
-    v('riser'),
-    join(v('limbsModel'), v('limbsLbs') && `${v('limbsLbs')} lbs`),
-    join(v('arrowModel'), v('spine')),
-  ]
-    .filter(Boolean)
-    .join(' · ');
-}
