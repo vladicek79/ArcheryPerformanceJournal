@@ -113,5 +113,8 @@ describe('weekly load', () => {
     const manual = { id: 'm', date: '2026-11-10', type: 'manual', status: 'finished', arrows: 60, minutes: 50, note: '' };
     expect(weeklyLoad([manual, all[0]])[0]).toMatchObject({ manual: 1, arrows: 63, mentalMin: 0, strengthMin: 0 });
     expect(sessionRow(manual)).toMatchObject({ type: 'manual', arrows: 60, minutes: 50 });
+    const both = weeklyLoad([manual, blank, { ...all[0], minutes: 20 }])[0];
+    expect(both.min).toMatchObject({ manual: 50, blank: 30, training: 20, strength: 0 });
+    expect(both.totalMin).toBe(100);
   });
 });

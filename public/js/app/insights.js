@@ -110,6 +110,9 @@ const emptyWeek = (week) => ({
   arrows: 0,
   strengthMin: 0,
   mentalMin: 0,
+  // minutes per session type (scored sessions: from the session timer), and their total
+  min: { training: 0, blank: 0, competition: 0, strength: 0, mental: 0, manual: 0 },
+  totalMin: 0,
 });
 
 export function weeklyLoad(sessions) {
@@ -121,6 +124,8 @@ export function weeklyLoad(sessions) {
     const row = byWeek.get(w);
     const type = sessionType(s);
     row[type] += 1;
+    row.min[type] += s.minutes || 0;
+    row.totalMin += s.minutes || 0;
     if (isScored(s.type)) row.arrows += computeStats(s.ends || []).arrows;
     else if (countsArrows(type)) row.arrows += s.arrows || 0;
     else if (type === 'strength') row.strengthMin += s.minutes || 0;

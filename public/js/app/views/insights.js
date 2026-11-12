@@ -454,10 +454,30 @@ function loadView(sessions) {
       w.mentalMin ? `Mental: ${w.mentalMin} min` : null,
     ].filter(Boolean),
   }));
+  // Time and arrows: two panels on the same weeks (one scale each, never two y-axes on one plot),
+  // sharing one tooltip so a week reads as a whole.
+  const fmtMin = (m) => (m >= 60 ? `${Math.floor(m / 60)} h${m % 60 ? ` ${m % 60} min` : ''}` : `${m} min`);
+  const volumeTip = (w) =>
+    [
+      `Week of ${weekLabel(w.week)}`,
+      `Time: ${w.totalMin ? fmtMin(w.totalMin) : '–'}`,
+      ...CHART_TYPES.filter((t) => w.min[t]).map((t) => `  ${TYPE_LABELS[t]}: ${fmtMin(w.min[t])}`),
+      `Arrows: ${w.arrows || '–'}`,
+    ];
+  const hourBars = weeks.map((w) => ({
+    label: weekLabel(w.week),
+    values: Object.fromEntries(CHART_TYPES.map((t) => [t, w.min[t] / 60])),
+    tip: volumeTip(w),
+  }));
+  const arrowSeries = [{ key: 'arrows', label: 'Arrows', color: 'var(--muted)' }];
+  const arrowBars = weeks.map((w) => ({ label: weekLabel(w.week), values: { arrows: w.arrows }, tip: volumeTip(w) }));
+  const panelLabel = (text) => h('div', { class: 'muted small' }, text);
+
   const cols = [
     ['Week of', (w) => weekLabel(w.week)],
     ...CHART_TYPES.map((t) => [TYPE_LABELS[t], (w) => String(w[t] || '–')]),
     ['Arrows', (w) => String(w.arrows || '–')],
+    ['Time', (w) => (w.totalMin ? fmtMin(w.totalMin) : '–')],
     ['Strength min', (w) => String(w.strengthMin || '–')],
     ['Mental min', (w) => String(w.mentalMin || '–')],
   ];
@@ -474,6 +494,20 @@ function loadView(sessions) {
       ),
       legend(series),
       stackedBars({ bars, series, yLabel: 'Sessions per week by type' }),
+    ),
+    card(
+      { class: 'chart-card' },
+      h(
+        'div',
+        { class: 'spread' },
+        h('h2', { class: 'card-title' }, 'Time and arrows per week'),
+        h('span', { class: 'muted small' }, 'time by type'),
+      ),
+      legend(series),
+      panelLabel('Hours'),
+      stackedBars({ bars: hourBars, series, height: 180, yLabel: 'Hours per week by type' }),
+      panelLabel('Arrows'),
+      stackedBars({ bars: arrowBars, series: arrowSeries, height: 150, yLabel: 'Arrows per week' }),
     ),
     card(
       { class: 'card-flush' },

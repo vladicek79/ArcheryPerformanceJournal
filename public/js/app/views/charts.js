@@ -190,7 +190,10 @@ export function stackedBars({ bars, series, height = 220, yLabel = '' }) {
       1,
       ...bars.map((b) => series.reduce((t, sr) => t + (b.values[sr.key] || 0), 0)),
     );
-    const step = maxTotal <= 5 ? 1 : Math.ceil(maxTotal / 4);
+    // a round step (1, 2, 5 × 10ⁿ) giving about four gridlines
+    const raw = maxTotal <= 5 ? 1 : maxTotal / 4;
+    const mag = 10 ** Math.floor(Math.log10(raw));
+    const step = [1, 2, 5, 10].map((m) => m * mag).find((v) => v >= raw);
     const top = Math.ceil(maxTotal / step) * step;
     const yAt = (v) => PAD.t + ih - (v / top) * ih;
     const ticks = [];
