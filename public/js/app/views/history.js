@@ -4,7 +4,7 @@ import { faceLabel, sheetPoint, isMultiSpot, spotCentres } from '../scoring.js';
 import { computeStats, sumArrows, fmt } from '../stats.js';
 import { T } from '../strings.js';
 import { icons } from '../icons.js';
-import { card, gearCard } from './common.js';
+import { card, gearCard, whenCard } from './common.js';
 import { VB, faceRings, faceSheet, faceViewBox } from './face.js';
 import { TYPE_LABELS, isScored, sessionType, formSummary, newestFirst } from '../sessionTypes.js';
 import { formSections } from './sessionForms.js';
@@ -128,6 +128,7 @@ function renderFormDetail(ctx, ss) {
         ),
       ),
       card({ class: 'setup-card', 'aria-label': `${TYPE_LABELS[ss.type]} session` }, formSections(ss.type, ss, change)),
+      whenCard(ctx, ss),
       ss.type === 'mental' ? null : gearCard(ctx, ss),
       reviewCard(ctx, ss),
       h('button', { type: 'button', class: 'btn btn-text danger', onClick: del }, T.deleteSession),
@@ -205,6 +206,7 @@ function renderDetail(ctx, ss) {
         tiles.map(([label, value]) => h('div', { class: 'tile' }, h('dt', null, label), h('dd', null, value))),
       ),
       sessionType(ss) === 'competition' ? competitionCard(ctx, ss) : null,
+      whenCard(ctx, ss),
       gearCard(ctx, ss),
       reviewCard(ctx, ss),
       sessionGroup(ss),

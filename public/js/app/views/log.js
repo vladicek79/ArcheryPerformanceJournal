@@ -375,8 +375,7 @@ function renderSetup(ctx, type, active = null) {
               timerButton(formTimer, toggleFormTimer),
             )
           : null,
-        // the When section above sets the date
-        ...formSections(type, form, changeForm, { withDate: false }),
+        ...formSections(type, form, changeForm),
         gearSection,
         h('button', { type: 'button', class: 'btn btn-primary btn-xl', onClick: saveForm }, 'Save session'),
       ];

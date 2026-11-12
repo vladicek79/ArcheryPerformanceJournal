@@ -1,5 +1,5 @@
 // Small shared view pieces.
-import { h } from '../../core/dom.js';
+import { h, todayIso } from '../../core/dom.js';
 import { zoneOf } from '../scoring.js';
 import { RUBRIC, T } from '../strings.js';
 import { icons } from '../icons.js';
@@ -51,6 +51,40 @@ export function guideSheet(onClose) {
       ),
     ),
   };
+}
+
+/** Date and start time of a saved session, editable in History (a cleared time is removed). */
+export function whenCard(ctx, ss) {
+  const change = (patch) => {
+    const cur = ctx.repo.get('sessions', ss.id);
+    if (cur && ctx.save('sessions', { ...cur, ...patch })) ctx.rerender();
+  };
+  return card(
+    { 'aria-labelledby': 'when-title' },
+    h('h2', { class: 'card-title', id: 'when-title' }, 'When'),
+    h(
+      'div',
+      { class: 'grid-2' },
+      h('input', {
+        class: 'input',
+        type: 'date',
+        'aria-label': 'Date',
+        max: todayIso(),
+        value: ss.date,
+        dataset: { fk: 'edit-date' },
+        // a cleared date picker keeps the stored date
+        onChange: (e) => (e.target.value ? change({ date: e.target.value }) : (e.target.value = ss.date)),
+      }),
+      h('input', {
+        class: 'input',
+        type: 'time',
+        'aria-label': 'Start time',
+        value: ss.time || '',
+        dataset: { fk: 'edit-time' },
+        onChange: (e) => change({ time: e.target.value || null }),
+      }),
+    ),
+  );
 }
 
 /** Equipment select for a session (gearChoices output): saved setups by name. */

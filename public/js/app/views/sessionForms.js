@@ -1,6 +1,6 @@
 // Forms of the non-scored session types (strength, mental). The same fields are used to create a
 // session (New session page) and to edit a saved one (History detail).
-import { h, todayIso } from '../../core/dom.js';
+import { h } from '../../core/dom.js';
 import { DRILLS, drillLabel, emptyDrill, MENTAL_TECHNIQUES, EFFORT_MAX, FOCUS_MAX } from '../sessionTypes.js';
 import { icons } from '../icons.js';
 import { chip, sectionLabel } from './common.js';
@@ -8,8 +8,7 @@ import { chip, sectionLabel } from './common.js';
 /** Empty strength / mental session fields. */
 export function emptyForm(type) {
   if (type === 'blank') return { arrows: null, minutes: null, note: '' };
-  // the date is left empty for today, so a draft kept overnight is not saved with yesterday's date
-  if (type === 'manual') return { date: null, arrows: null, minutes: null, note: '' };
+  if (type === 'manual') return { arrows: null, minutes: null, note: '' };
   return type === 'strength'
     ? { minutes: null, effort: null, drills: [], note: '' }
     : { minutes: null, focus: null, techniques: [] };
@@ -26,7 +25,7 @@ const toInt = (v) => {
  * was stored without re-rendering is never overwritten by a later tap. Typing does not re-render (the
  * field keeps focus); taps do.
  */
-export function formSections(type, value, change, { withDate = true } = {}) {
+export function formSections(type, value, change) {
   const numberField = (label, key, fk, { suffix = '' } = {}) =>
     h(
       'label',
@@ -114,23 +113,8 @@ export function formSections(type, value, change, { withDate = true } = {}) {
   }
 
   if (type === 'manual') {
-    // typed in afterwards: the day, then the arrows and / or the duration
+    // typed in afterwards (the date and time are set in the When section): arrows and / or duration
     return [
-      withDate &&
-      h(
-        'label',
-        { class: 'field' },
-        h('span', { class: 'field-label' }, 'Date'),
-        h('input', {
-          class: 'input',
-          type: 'date',
-          max: todayIso(),
-          value: value.date || todayIso(),
-          dataset: { fk: 'date' },
-          // a cleared date picker keeps the date already stored
-          onChange: (e) => e.target.value && change(() => ({ date: e.target.value }), { rerender: false }),
-        }),
-      ),
       h(
         'div',
         { class: 'grid-2' },
