@@ -1,6 +1,6 @@
 // Forms of the non-scored session types (strength, mental). The same fields are used to create a
 // session (New session page) and to edit a saved one (History detail).
-import { h } from '../../core/dom.js';
+import { h, todayIso } from '../../core/dom.js';
 import { DRILLS, drillLabel, emptyDrill, MENTAL_TECHNIQUES, EFFORT_MAX, FOCUS_MAX } from '../sessionTypes.js';
 import { icons } from '../icons.js';
 import { chip, sectionLabel } from './common.js';
@@ -8,6 +8,8 @@ import { chip, sectionLabel } from './common.js';
 /** Empty strength / mental session fields. */
 export function emptyForm(type) {
   if (type === 'blank') return { arrows: null, minutes: null, note: '' };
+  // the date is left empty for today, so a draft kept overnight is not saved with yesterday's date
+  if (type === 'manual') return { date: null, arrows: null, minutes: null, note: '' };
   return type === 'strength'
     ? { minutes: null, effort: null, drills: [], note: '' }
     : { minutes: null, focus: null, techniques: [] };
@@ -107,6 +109,33 @@ export function formSections(type, value, change) {
         ),
       ),
       numberField('Duration', 'minutes', 'minutes', { suffix: 'min' }),
+      noteField('What you worked on, how it felt…'),
+    ];
+  }
+
+  if (type === 'manual') {
+    // typed in afterwards: the day, then the arrows and / or the duration
+    return [
+      h(
+        'label',
+        { class: 'field' },
+        h('span', { class: 'field-label' }, 'Date'),
+        h('input', {
+          class: 'input',
+          type: 'date',
+          max: todayIso(),
+          value: value.date || todayIso(),
+          dataset: { fk: 'date' },
+          // a cleared date picker keeps the date already stored
+          onChange: (e) => e.target.value && change(() => ({ date: e.target.value }), { rerender: false }),
+        }),
+      ),
+      h(
+        'div',
+        { class: 'grid-2' },
+        numberField('Arrows shot', 'arrows', 'arrows'),
+        numberField('Duration', 'minutes', 'minutes', { suffix: 'min' }),
+      ),
       noteField('What you worked on, how it felt…'),
     ];
   }

@@ -1,6 +1,6 @@
 // What the app stores (ARCHITECTURE §6.4). The repository validates before every save and on import.
 import { FACE_IDS, ARROWS_PER_END_MAX, isValidArrowsPerEnd, isValidArrowValue } from './scoring.js';
-import { SESSION_TYPES, DRILL_IDS, MENTAL_TECHNIQUES, EFFORT_MAX, FOCUS_MAX, isScored } from './sessionTypes.js';
+import { SESSION_TYPES, DRILL_IDS, MENTAL_TECHNIQUES, EFFORT_MAX, FOCUS_MAX, isScored, countsArrows } from './sessionTypes.js';
 
 const isStr = (v) => typeof v === 'string';
 const isGrade = (g) => g == null || (Number.isInteger(g) && g >= 1 && g <= 5);
@@ -39,8 +39,9 @@ function validateForm(r) {
   if (r.status !== 'finished') errs.push(`${r.type} sessions are saved as finished`);
   if (!isOptInt(r.minutes, 0, 1440)) errs.push('invalid minutes');
   if (r.note != null && !isStr(r.note)) errs.push('invalid note');
-  if (r.type === 'blank') {
+  if (countsArrows(r.type)) {
     if (!isOptInt(r.arrows, 0, 10000)) errs.push('invalid arrow count');
+    else if (r.type === 'manual' && !r.arrows && !r.minutes) errs.push('enter the arrows or the duration');
   } else if (r.type === 'strength') {
     if (!isOptInt(r.effort, 1, EFFORT_MAX)) errs.push('invalid effort');
     if (!Array.isArray(r.drills)) errs.push('drills must be a list');

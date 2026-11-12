@@ -1,6 +1,6 @@
 // Insights: pure data helpers for trends, the sessions table, the review journal and training load.
 import { computeStats } from './stats.js';
-import { isScored, sessionType } from './sessionTypes.js';
+import { isScored, sessionType, countsArrows } from './sessionTypes.js';
 
 export const RANGES = [
   { id: '30d', label: '30 days', days: 30 },
@@ -47,7 +47,7 @@ export function sessionRow(s) {
     face: scored ? s.face : null,
     event: s.competition?.event || '',
     // blank bale: the arrows are counted but not scored
-    arrows: st ? st.arrows : s.type === 'blank' ? (s.arrows ?? null) : null,
+    arrows: st ? st.arrows : countsArrows(s.type) ? (s.arrows ?? null) : null,
     total: st ? st.total : null,
     max: st ? st.max : null,
     avgArrow: st && st.arrows ? st.avgArrow : null,
@@ -106,6 +106,7 @@ const emptyWeek = (week) => ({
   competition: 0,
   strength: 0,
   mental: 0,
+  manual: 0,
   arrows: 0,
   strengthMin: 0,
   mentalMin: 0,
@@ -121,9 +122,9 @@ export function weeklyLoad(sessions) {
     const type = sessionType(s);
     row[type] += 1;
     if (isScored(s.type)) row.arrows += computeStats(s.ends || []).arrows;
-    else if (type === 'blank') row.arrows += s.arrows || 0;
+    else if (countsArrows(type)) row.arrows += s.arrows || 0;
     else if (type === 'strength') row.strengthMin += s.minutes || 0;
-    else row.mentalMin += s.minutes || 0;
+    else if (type === 'mental') row.mentalMin += s.minutes || 0;
   }
   const weeks = [...byWeek.keys()].sort();
   const out = [];

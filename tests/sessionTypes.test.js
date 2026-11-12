@@ -78,6 +78,22 @@ describe('blank bale', () => {
   });
 });
 
+describe('manual session', () => {
+  const manual = (extra = {}) => ({ type: 'manual', date: '2026-11-08', status: 'finished', arrows: 90, minutes: null, note: '', ...extra });
+  it('needs the arrows or the duration', () => {
+    expect(isScored('manual')).toBe(false);
+    expect(validate(manual())).toEqual([]);
+    expect(validate(manual({ arrows: null, minutes: 45 }))).toEqual([]);
+    expect(validate(manual({ arrows: null })).join()).toMatch(/arrows or the duration/);
+    expect(validate(manual({ arrows: -1 })).join()).toMatch(/arrow count/);
+    expect(formSummary(manual({ minutes: 45 }))).toBe('90 arrows · 45 min');
+  });
+  it('is refused by apps that only know schema 4', () => {
+    expect(migrate({ schemaVersion: 4 }, 5, migrations).schemaVersion).toBe(5);
+    expect(() => migrate({ schemaVersion: 5 }, 4, migrations)).toThrow(/newer/);
+  });
+});
+
 describe('schema v3 migration', () => {
   it('marks existing sessions as training and leaves deletion markers alone', () => {
     const v2 = {

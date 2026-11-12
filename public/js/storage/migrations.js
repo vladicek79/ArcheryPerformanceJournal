@@ -30,6 +30,15 @@ export const migrations = [
       return { ...doc };
     },
   },
+  {
+    // v5: the manual session type. As in v4, only the version changes, so older app versions
+    // refuse the data instead of dropping manual sessions on sync.
+    from: 4,
+    to: 5,
+    up(doc) {
+      return { ...doc };
+    },
+  },
 ];
 
 export class NewerVersionError extends Error {

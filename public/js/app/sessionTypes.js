@@ -1,6 +1,6 @@
 // Session types (training, blank bale, competition, strength, mental) and the fields of the non-scored ones.
 
-export const SESSION_TYPES = ['training', 'blank', 'competition', 'strength', 'mental'];
+export const SESSION_TYPES = ['training', 'blank', 'competition', 'strength', 'mental', 'manual'];
 
 export const TYPE_LABELS = {
   training: 'Training',
@@ -8,9 +8,16 @@ export const TYPE_LABELS = {
   competition: 'Competition',
   strength: 'Strength',
   mental: 'Mental',
+  manual: 'Manual',
 };
 
-/** Training and competition are scored arrow by arrow on the Log; blank bale, strength and mental are a short form. */
+/** Session types that record a number of arrows instead of scoring them. */
+export const countsArrows = (type) => type === 'blank' || type === 'manual';
+
+/**
+ * Training and competition are scored arrow by arrow on the Log; the others are a short form.
+ * Manual: arrows and / or duration typed in afterwards, with a date and no timer.
+ */
 export function isScored(type) {
   return type == null || type === 'training' || type === 'competition';
 }
@@ -39,7 +46,7 @@ export function emptyDrill(kind) {
 /** One line describing a strength or mental session (History list, Dashboard). */
 export function formSummary(session) {
   const parts = [];
-  if (session.type === 'blank' && session.arrows != null) parts.push(`${session.arrows} arrows`);
+  if (countsArrows(session.type) && session.arrows != null) parts.push(`${session.arrows} arrows`);
   if (session.minutes) parts.push(`${session.minutes} min`);
   if (session.type === 'strength') {
     if (session.effort) parts.push(`effort ${session.effort}/${EFFORT_MAX}`);

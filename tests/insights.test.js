@@ -110,5 +110,8 @@ describe('weekly load', () => {
     const blank = { id: 'z', date: '2026-11-10', type: 'blank', status: 'finished', arrows: 48, minutes: 30, note: '' };
     expect(weeklyLoad([blank, all[0]])[0]).toMatchObject({ blank: 1, training: 1, arrows: 51 });
     expect(sessionRow(blank)).toMatchObject({ arrows: 48, total: null, minutes: 30 });
+    const manual = { id: 'm', date: '2026-11-10', type: 'manual', status: 'finished', arrows: 60, minutes: 50, note: '' };
+    expect(weeklyLoad([manual, all[0]])[0]).toMatchObject({ manual: 1, arrows: 63, mentalMin: 0, strengthMin: 0 });
+    expect(sessionRow(manual)).toMatchObject({ type: 'manual', arrows: 60, minutes: 50 });
   });
 });

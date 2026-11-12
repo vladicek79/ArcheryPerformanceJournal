@@ -24,15 +24,16 @@ const VIEWS = [
   ['load', 'Training load'],
 ];
 
-// one fixed color per session type: categorical slots 1–5, validated as a set for both themes.
+// one fixed color per session type: categorical slots 1–6, validated as a set for both themes.
 // The chart order keeps the validated adjacent pairs (slot n next to slot n+1) in stacked bars.
-const CHART_TYPES = ['training', 'competition', 'strength', 'mental', 'blank'];
+const CHART_TYPES = ['training', 'competition', 'strength', 'mental', 'blank', 'manual'];
 const TYPE_COLORS = {
   training: 'var(--series-1)',
   competition: 'var(--series-2)',
   strength: 'var(--series-3)',
   mental: 'var(--series-4)',
   blank: 'var(--series-5)',
+  manual: 'var(--series-6)',
 };
 
 const DEFAULTS = { range: '90d', type: 'all', distance: 'all', sortKey: 'date', sortDir: 'desc', q: '' };

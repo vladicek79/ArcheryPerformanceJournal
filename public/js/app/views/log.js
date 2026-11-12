@@ -54,6 +54,7 @@ const TYPE_HINTS = {
   competition: 'Scored like training, with event and placement',
   strength: 'SPT, holding and draw drills, effort',
   mental: 'Visualisation, breathing, shot routine…',
+  manual: 'Type in the arrows or the duration afterwards',
 };
 
 function renderTypeChoice(ctx) {
@@ -200,8 +201,10 @@ function renderSetup(ctx, type, active = null) {
   // settings (not synced), so it survives the app being closed, and fills in the duration on save.
   const formTimers = settings.formTimers || {};
   // A timer left behind by a form that was opened but never saved starts again after some hours.
+  // Manual sessions are typed in afterwards and have no timer.
+  const timed = !isScored(type) && type !== 'manual';
   let formTimer = formTimers[type];
-  if (!isScored(type)) {
+  if (timed) {
     const opened = L.openFormTimer(formTimer);
     if (opened !== formTimer) ctx.repo.saveSettings({ formTimers: { ...formTimers, [type]: opened } });
     formTimer = opened;
@@ -218,11 +221,11 @@ function renderSetup(ctx, type, active = null) {
     const fields = currentForm();
     const all = ctx.repo.getSettings().formTimers || {};
     // minutes typed by hand win over the timer
-    const minutes = fields.minutes ?? (all[type] ? Math.round(L.timerElapsed(all[type]) / 60000) : null);
+    const minutes = fields.minutes ?? (timed && all[type] ? Math.round(L.timerElapsed(all[type]) / 60000) : null);
     const gear = type === 'mental' ? {} : chosenGear();
-    const saved = ctx.save('sessions', { type, date: todayIso(), status: 'finished', ...fields, minutes, ...gear });
+    const saved = ctx.save('sessions', { type, status: 'finished', ...fields, date: fields.date || todayIso(), minutes, ...gear });
     if (!saved) return;
-    ctx.repo.saveSettings({ formTimers: { ...all, [type]: null } });
+    if (timed) ctx.repo.saveSettings({ formTimers: { ...all, [type]: null } });
     ctx.ui.quietSet({ setup: { ...setup, forms: { ...setup.forms, [type]: null } } });
     ctx.navigate(`history/${saved.id}`);
   };
@@ -293,12 +296,14 @@ function renderSetup(ctx, type, active = null) {
         h('button', { type: 'button', class: 'btn btn-primary btn-xl', onClick: start }, T.start),
       ]
     : [
-        h(
-          'div',
-          { class: 'spread align-center' },
-          h('span', { class: 'field-label' }, 'Timer'),
-          timerButton(formTimer, toggleFormTimer),
-        ),
+        timed
+          ? h(
+              'div',
+              { class: 'spread align-center' },
+              h('span', { class: 'field-label' }, 'Timer'),
+              timerButton(formTimer, toggleFormTimer),
+            )
+          : null,
         ...formSections(type, form, changeForm),
         gearSection,
         h('button', { type: 'button', class: 'btn btn-primary btn-xl', onClick: saveForm }, 'Save session'),
