@@ -31,8 +31,21 @@ export function renderGear(ctx) {
     const name = nameInput.value.trim() || `Setup ${snapshots.length + 1}`;
     const saved = ctx.save('gearSnapshots', { name, date: todayIso(), fields: { ...ctx.repo.getSettings().gear } });
     if (saved) {
-      ctx.saveSettings({ activeSnapshotId: saved.id });
+      ctx.saveSettings({ activeSnapshotId: saved.id, loadedSnapshotId: saved.id });
       ctx.ui.quietSet({ snapName: '' });
+      ctx.rerender();
+    }
+  };
+
+  // The setup loaded from a saved one can be written back to it (sessions keep their own copy).
+  const loaded = snapshots.find((sn) => sn.id === (settings.loadedSnapshotId ?? settings.activeSnapshotId));
+  const updateSnap = () => {
+    const cur = ctx.repo.get('gearSnapshots', loaded.id);
+    if (!cur) return;
+    const saved = ctx.save('gearSnapshots', { ...cur, date: todayIso(), fields: { ...ctx.repo.getSettings().gear } });
+    if (saved) {
+      ctx.saveSettings({ activeSnapshotId: saved.id, loadedSnapshotId: saved.id });
+      ctx.toast(`"${saved.name}" updated`);
       ctx.rerender();
     }
   };
@@ -59,12 +72,23 @@ export function renderGear(ctx) {
       card(
         { 'aria-labelledby': 'snap-title' },
         h('h2', { class: 'card-title', id: 'snap-title' }, T.snapshots),
+        loaded
+          ? h(
+              'button',
+              { type: 'button', class: 'btn btn-primary', dataset: { fk: 'update-snap' }, onClick: updateSnap },
+              `Update "${loaded.name}"`,
+            )
+          : null,
         h(
           'div',
           { class: 'row' },
           h('label', { for: 'setup-name', class: 'sr-only' }, T.snapshotName),
           nameInput,
-          h('button', { type: 'button', class: 'btn btn-primary', onClick: saveSnap }, T.save),
+          h(
+            'button',
+            { type: 'button', class: loaded ? 'btn btn-outline' : 'btn btn-primary', onClick: saveSnap },
+            loaded ? 'Save as new' : T.save,
+          ),
         ),
         snapshots.length ? null : h('p', { class: 'muted small' }, T.noSnaps),
         h(
@@ -88,7 +112,7 @@ export function renderGear(ctx) {
                   'aria-label': `${T.load} ${sn.name}`,
                   onClick: () => {
                     if (filledCount(ctx.repo.getSettings().gear) && !confirm(T.confirmLoadSnap(sn.name))) return;
-                    if (ctx.saveSettings({ gear: { ...sn.fields }, activeSnapshotId: sn.id })) ctx.rerender();
+                    if (ctx.saveSettings({ gear: { ...sn.fields }, activeSnapshotId: sn.id, loadedSnapshotId: sn.id })) ctx.rerender();
                   },
                 },
                 T.load,
@@ -102,7 +126,13 @@ export function renderGear(ctx) {
                   onClick: () => {
                     if (!confirm(T.confirmDeleteSnap(sn.name))) return;
                     ctx.remove('gearSnapshots', sn.id);
-                    if (ctx.repo.getSettings().activeSnapshotId === sn.id) ctx.saveSettings({ activeSnapshotId: null });
+                    const st = ctx.repo.getSettings();
+                    if (st.activeSnapshotId === sn.id || st.loadedSnapshotId === sn.id) {
+                      ctx.saveSettings({
+                        activeSnapshotId: st.activeSnapshotId === sn.id ? null : st.activeSnapshotId,
+                        loadedSnapshotId: st.loadedSnapshotId === sn.id ? null : st.loadedSnapshotId,
+                      });
+                    }
                     ctx.rerender();
                   },
                 },

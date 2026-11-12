@@ -3,6 +3,7 @@ import { h } from '../../core/dom.js';
 import { zoneOf } from '../scoring.js';
 import { RUBRIC, T } from '../strings.js';
 import { icons } from '../icons.js';
+import { gearChoices, gearForChoice } from '../gearFields.js';
 
 export const scoreChip = (v, extra = '') => h('span', { class: `score-chip z-${zoneOf(v)} ${extra}` }, v == null ? '' : String(v));
 
@@ -62,5 +63,25 @@ export function gearPicker({ options, value, onChange }) {
       { class: 'input', 'aria-label': 'Equipment', dataset: { fk: 'gear' }, onChange: (e) => onChange(e.target.value) },
       options.map(([v, l]) => h('option', { value: v, selected: v === value }, l)),
     ),
+  );
+}
+
+/**
+ * The equipment a session used, changeable on the running session and later in History
+ * (picking a saved setup copies its fields into the session).
+ */
+export function gearCard(ctx, ss) {
+  const settings = ctx.repo.getSettings();
+  const snapshots = ctx.repo.list('gearSnapshots', { sort: (a, b) => b.createdAt.localeCompare(a.createdAt) });
+  const choices = gearChoices({ settings, snapshots, session: ss });
+  const onChange = (v) => {
+    const cur = ctx.repo.get('sessions', ss.id);
+    const next = gearForChoice(v, { settings, snapshots });
+    if (cur && next && ctx.save('sessions', { ...cur, ...next })) ctx.rerender();
+  };
+  return card(
+    { 'aria-labelledby': 'gear-title' },
+    h('h2', { class: 'card-title', id: 'gear-title' }, 'Equipment'),
+    gearPicker({ ...choices, onChange }),
   );
 }

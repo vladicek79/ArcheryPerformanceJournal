@@ -123,6 +123,8 @@ export const defaultSettings = {
   askGrades: true,
   gear: {},
   activeSnapshotId: null,
+  // the saved setup the Gear tab was last loaded from (kept while editing, so it can be updated)
+  loadedSnapshotId: null,
   lastSetup: { distance: 18, face: '40t', arrowsPerEnd: 3 },
   sightsSeeded: false,
 };
@@ -130,7 +132,7 @@ export const defaultSettings = {
 /** Settings shared between devices by Google Drive sync; all others stay on the device. */
 // Only the gear setup: lastSetup / sightsSeeded change on their own (starting a session, first launch)
 // and would otherwise make a fresh device's settings look newer than the real gear setup.
-export const SYNCED_SETTING_KEYS = ['gear', 'activeSnapshotId'];
+export const SYNCED_SETTING_KEYS = ['gear', 'activeSnapshotId', 'loadedSnapshotId'];
 
 export const ACCENTS = ['#0B6E4F', '#14181C', '#1D4ED8', '#B45309'];
 export const DEFAULT_SIGHT_DISTANCES = ['18', '30', '50', '60', '70', '90'];

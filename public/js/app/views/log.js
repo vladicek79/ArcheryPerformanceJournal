@@ -18,7 +18,7 @@ import { sumArrows, computeStats, fmt } from '../stats.js';
 import * as L from '../sessionLogic.js';
 import { T } from '../strings.js';
 import { icons } from '../icons.js';
-import { card, chip, sectionLabel, gearPicker } from './common.js';
+import { card, chip, sectionLabel, gearPicker, gearCard } from './common.js';
 import { gearChoices, gearForChoice } from '../gearFields.js';
 import { faceSheet, faceViewBox } from './face.js';
 import { SESSION_TYPES, TYPE_LABELS, isScored } from '../sessionTypes.js';
@@ -676,6 +676,7 @@ function renderActive(ctx, session) {
             h('ol', { class: 'saved-ends', reversed: true }, rows.reverse()),
           )
         : null,
+      gearCard(ctx, session),
       h('button', { type: 'button', class: 'btn btn-text danger', onClick: discard }, T.discardSession),
     ),
   };

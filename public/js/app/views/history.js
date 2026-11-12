@@ -4,8 +4,7 @@ import { faceLabel, sheetPoint, isMultiSpot, spotCentres } from '../scoring.js';
 import { computeStats, sumArrows, fmt } from '../stats.js';
 import { T } from '../strings.js';
 import { icons } from '../icons.js';
-import { card, gearPicker } from './common.js';
-import { gearChoices, gearForChoice } from '../gearFields.js';
+import { card, gearCard } from './common.js';
 import { VB, faceRings, faceSheet, faceViewBox } from './face.js';
 import { TYPE_LABELS, isScored, sessionType, formSummary } from '../sessionTypes.js';
 import { formSections } from './sessionForms.js';
@@ -134,23 +133,6 @@ function renderFormDetail(ctx, ss) {
       h('button', { type: 'button', class: 'btn btn-text danger', onClick: del }, T.deleteSession),
     ),
   };
-}
-
-/** The equipment used, changeable later (picking a saved setup copies its fields into the session). */
-function gearCard(ctx, ss) {
-  const settings = ctx.repo.getSettings();
-  const snapshots = ctx.repo.list('gearSnapshots', { sort: (a, b) => b.createdAt.localeCompare(a.createdAt) });
-  const choices = gearChoices({ settings, snapshots, session: ss });
-  const onChange = (v) => {
-    const cur = ctx.repo.get('sessions', ss.id);
-    const next = gearForChoice(v, { settings, snapshots });
-    if (cur && next && ctx.save('sessions', { ...cur, ...next })) ctx.rerender();
-  };
-  return card(
-    { 'aria-labelledby': 'gear-title' },
-    h('h2', { class: 'card-title', id: 'gear-title' }, 'Equipment'),
-    gearPicker({ ...choices, onChange }),
-  );
 }
 
 /** Competition details, editable (placement is usually known only after the event). */
