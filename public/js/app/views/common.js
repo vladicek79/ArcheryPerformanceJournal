@@ -51,3 +51,17 @@ export function guideSheet(onClose) {
     ),
   };
 }
+
+/** Equipment select for a session (gearChoices output), with a one-line summary of the chosen gear. */
+export function gearPicker({ options, value, summary, onChange }) {
+  return h(
+    'div',
+    { class: 'field' },
+    h(
+      'select',
+      { class: 'input', 'aria-label': 'Equipment', dataset: { fk: 'gear' }, onChange: (e) => onChange(e.target.value) },
+      options.map(([v, l]) => h('option', { value: v, selected: v === value }, l)),
+    ),
+    summary ? h('span', { class: 'muted small' }, summary) : null,
+  );
+}

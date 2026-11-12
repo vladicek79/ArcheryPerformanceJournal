@@ -18,7 +18,8 @@ import { sumArrows, computeStats, fmt } from '../stats.js';
 import * as L from '../sessionLogic.js';
 import { T } from '../strings.js';
 import { icons } from '../icons.js';
-import { card, chip, sectionLabel } from './common.js';
+import { card, chip, sectionLabel, gearPicker } from './common.js';
+import { gearChoices, gearForChoice, gearSummary } from '../gearFields.js';
 import { faceSheet, faceViewBox } from './face.js';
 import { SESSION_TYPES, TYPE_LABELS, isScored } from '../sessionTypes.js';
 import { emptyForm, formSections } from './sessionForms.js';
@@ -126,6 +127,26 @@ function renderSetup(ctx, type, active = null) {
     0,
   );
 
+  // equipment: the Gear tab's setup by default, or any saved setup (not asked for mental sessions)
+  const snapshots = ctx.repo.list('gearSnapshots', { sort: (a, b) => b.createdAt.localeCompare(a.createdAt) });
+  const gearOpts = gearChoices({ settings, snapshots });
+  const gearChoice = gearOpts.options.some((o) => o[0] === setup.gear) ? setup.gear : gearOpts.value;
+  const chosenGear = () => gearForChoice(gearChoice, { settings, snapshots }) || { gear: null, gearSnapshotId: null };
+  const gearSection =
+    type === 'mental'
+      ? null
+      : h(
+          'section',
+          { class: 'setup-section', 'aria-labelledby': 'lbl-gear' },
+          sectionLabel('Equipment', 'lbl-gear'),
+          gearPicker({
+            ...gearOpts,
+            value: gearChoice,
+            summary: gearSummary(chosenGear().gear),
+            onChange: (v) => set({ gear: v }),
+          }),
+        );
+
   const start = () => {
     // Only one session runs at a time: an in-progress session is finished (saved ends kept) or,
     // if it has no saved ends, discarded.
@@ -145,8 +166,7 @@ function renderSetup(ctx, type, active = null) {
       face,
       arrowsPerEnd,
       competition: type === 'competition' ? { ...setup.competition, placement: '' } : null,
-      gear: { ...settings.gear },
-      gearSnapshotId: settings.activeSnapshotId,
+      ...chosenGear(),
     });
     ctx.ui.quietSet({ setup: null });
     if (ctx.save('sessions', session)) ctx.navigate('log');
@@ -198,7 +218,8 @@ function renderSetup(ctx, type, active = null) {
     const all = ctx.repo.getSettings().formTimers || {};
     // minutes typed by hand win over the timer
     const minutes = fields.minutes ?? (all[type] ? Math.round(L.timerElapsed(all[type]) / 60000) : null);
-    const saved = ctx.save('sessions', { type, date: todayIso(), status: 'finished', ...fields, minutes });
+    const gear = type === 'mental' ? {} : chosenGear();
+    const saved = ctx.save('sessions', { type, date: todayIso(), status: 'finished', ...fields, minutes, ...gear });
     if (!saved) return;
     ctx.repo.saveSettings({ formTimers: { ...all, [type]: null } });
     ctx.ui.quietSet({ setup: { ...setup, forms: { ...setup.forms, [type]: null } } });
@@ -267,6 +288,7 @@ function renderSetup(ctx, type, active = null) {
               ),
             )
           : null,
+        gearSection,
         h('button', { type: 'button', class: 'btn btn-primary btn-xl', onClick: start }, T.start),
       ]
     : [
@@ -277,6 +299,7 @@ function renderSetup(ctx, type, active = null) {
           timerButton(formTimer, toggleFormTimer),
         ),
         ...formSections(type, form, changeForm),
+        gearSection,
         h('button', { type: 'button', class: 'btn btn-primary btn-xl', onClick: saveForm }, 'Save session'),
       ];
 

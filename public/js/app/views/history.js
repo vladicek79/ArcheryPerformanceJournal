@@ -4,7 +4,8 @@ import { faceLabel, sheetPoint, isMultiSpot, spotCentres } from '../scoring.js';
 import { computeStats, sumArrows, fmt } from '../stats.js';
 import { T } from '../strings.js';
 import { icons } from '../icons.js';
-import { card } from './common.js';
+import { card, gearPicker } from './common.js';
+import { gearChoices, gearForChoice, gearSummary } from '../gearFields.js';
 import { VB, faceRings, faceSheet, faceViewBox } from './face.js';
 import { TYPE_LABELS, isScored, sessionType, formSummary } from '../sessionTypes.js';
 import { formSections } from './sessionForms.js';
@@ -128,10 +129,28 @@ function renderFormDetail(ctx, ss) {
         ),
       ),
       card({ class: 'setup-card', 'aria-label': `${TYPE_LABELS[ss.type]} session` }, formSections(ss.type, ss, change)),
+      ss.type === 'mental' ? null : gearCard(ctx, ss),
       reviewCard(ctx, ss),
       h('button', { type: 'button', class: 'btn btn-text danger', onClick: del }, T.deleteSession),
     ),
   };
+}
+
+/** The equipment used, changeable later (picking a saved setup copies its fields into the session). */
+function gearCard(ctx, ss) {
+  const settings = ctx.repo.getSettings();
+  const snapshots = ctx.repo.list('gearSnapshots', { sort: (a, b) => b.createdAt.localeCompare(a.createdAt) });
+  const choices = gearChoices({ settings, snapshots, session: ss });
+  const onChange = (v) => {
+    const cur = ctx.repo.get('sessions', ss.id);
+    const next = gearForChoice(v, { settings, snapshots });
+    if (cur && next && ctx.save('sessions', { ...cur, ...next })) ctx.rerender();
+  };
+  return card(
+    { 'aria-labelledby': 'gear-title' },
+    h('h2', { class: 'card-title', id: 'gear-title' }, 'Equipment'),
+    gearPicker({ ...choices, summary: gearSummary(ss.gear), onChange }),
+  );
 }
 
 /** Competition details, editable (placement is usually known only after the event). */
@@ -204,6 +223,7 @@ function renderDetail(ctx, ss) {
         tiles.map(([label, value]) => h('div', { class: 'tile' }, h('dt', null, label), h('dd', null, value))),
       ),
       sessionType(ss) === 'competition' ? competitionCard(ctx, ss) : null,
+      gearCard(ctx, ss),
       reviewCard(ctx, ss),
       sessionGroup(ss),
       card(
