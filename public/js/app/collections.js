@@ -1,6 +1,6 @@
 // What the app stores (ARCHITECTURE §6.4). The repository validates before every save and on import.
 import { FACE_IDS, ARROWS_PER_END_MAX, isValidArrowsPerEnd, isValidArrowValue } from './scoring.js';
-import { SESSION_TYPES, DRILL_IDS, MENTAL_TECHNIQUES, EFFORT_MAX, FOCUS_MAX, isScored, countsArrows } from './sessionTypes.js';
+import { SESSION_TYPES, DRILL_IDS, MENTAL_TECHNIQUES, EFFORT_MAX, FOCUS_MAX, isScored, countsArrows, isTime } from './sessionTypes.js';
 
 const isStr = (v) => typeof v === 'string';
 const isGrade = (g) => g == null || (Number.isInteger(g) && g >= 1 && g <= 5);
@@ -63,6 +63,7 @@ export const collections = {
     validate(r) {
       const errs = [];
       if (!/^\d{4}-\d{2}-\d{2}$/.test(r.date || '')) errs.push('date must be YYYY-MM-DD');
+      if (r.time != null && !isTime(r.time)) errs.push('time must be HH:MM');
       if (!SESSION_TYPES.includes(r.type)) errs.push('invalid session type');
       if (!['active', 'finished'].includes(r.status)) errs.push('invalid status');
       if (r.review != null && (typeof r.review !== 'object' || !isStr(r.review.good ?? '') || !isStr(r.review.workOn ?? '') || !isStr(r.review.how ?? ''))) errs.push('invalid review');

@@ -320,3 +320,19 @@ describe('form timer (blank bale, strength, mental)', () => {
     expect(L.timerElapsed(L.openFormTimer(null, now), now)).toBe(0);
   });
 });
+
+describe('session logged afterwards', () => {
+  it('keeps the start time and a stopped timer holding the duration typed in', () => {
+    const s = L.createSession({ date: '2026-11-08', time: '17:30', distance: 18, face: '40t', arrowsPerEnd: 3, pastMinutes: 90 });
+    expect(s).toMatchObject({ date: '2026-11-08', time: '17:30', timer: { running: false, elapsedMs: 90 * 60000 } });
+    expect(collections.sessions.validate({ id: 'a', ...s })).toEqual([]);
+    expect(L.finishSession(L.enterScore(s, 9, 0, 0)).minutes).toBe(90);
+    expect(collections.sessions.validate({ id: 'a', ...s, time: '25:00' }).join()).toMatch(/HH:MM/);
+  });
+  it('counts as past only when the start is more than a quarter of an hour ago', () => {
+    const now = new Date('2026-11-12T18:00:00');
+    expect(L.isPastStart('2026-11-12', '17:50', now)).toBe(false);
+    expect(L.isPastStart('2026-11-12', '17:30', now)).toBe(true);
+    expect(L.isPastStart('2026-11-11', '18:00', now)).toBe(true);
+  });
+});

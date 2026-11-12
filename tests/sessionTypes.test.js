@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { collections } from '../public/js/app/collections.js';
 import { migrate, migrations } from '../public/js/storage/migrations.js';
 import * as L from '../public/js/app/sessionLogic.js';
-import { isScored, formSummary, emptyDrill } from '../public/js/app/sessionTypes.js';
+import { isScored, formSummary, emptyDrill, newestFirst } from '../public/js/app/sessionTypes.js';
 
 const validate = (r) => collections.sessions.validate({ id: 'a', ...r });
 const strength = (extra = {}) => ({
@@ -110,5 +110,14 @@ describe('schema v3 migration', () => {
     expect(v3.schemaVersion).toBe(3);
     expect(v3.collections.sessions[0].type).toBe('training');
     expect(v3.collections.sessions[1].type).toBeUndefined();
+  });
+});
+
+describe('session order', () => {
+  it('sorts newest first by date and start time, older sessions by when they were created', () => {
+    const a = { id: 'a', date: '2026-11-10', time: '18:00', createdAt: '2026-11-12T09:00:00Z' };
+    const b = { id: 'b', date: '2026-11-10', time: '07:30', createdAt: '2026-11-12T10:00:00Z' };
+    const c = { id: 'c', date: '2026-11-11', createdAt: '2026-11-11T08:00:00Z' };
+    expect([b, a, c].sort(newestFirst).map((x) => x.id)).toEqual(['c', 'a', 'b']);
   });
 });

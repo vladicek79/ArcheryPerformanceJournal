@@ -6,14 +6,14 @@ import { T } from '../strings.js';
 import { icons } from '../icons.js';
 import { card, gearCard } from './common.js';
 import { VB, faceRings, faceSheet, faceViewBox } from './face.js';
-import { TYPE_LABELS, isScored, sessionType, formSummary } from '../sessionTypes.js';
+import { TYPE_LABELS, isScored, sessionType, formSummary, newestFirst } from '../sessionTypes.js';
 import { formSections } from './sessionForms.js';
 import { formatDuration } from '../sessionLogic.js';
 
 const finished = (repo) =>
   repo.list('sessions', {
     filter: (x) => x.status === 'finished',
-    sort: (a, b) => (b.date + b.createdAt).localeCompare(a.date + a.createdAt),
+    sort: newestFirst,
   });
 
 export function renderHistory(ctx, params) {
@@ -36,7 +36,7 @@ function formListCard(ss) {
     h(
       'div',
       { class: 'spread' },
-      h('strong', null, formatDate(ss.date, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })),
+      h('strong', null, formatDate(ss.date, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }), ss.time ? ` · ${ss.time}` : ''),
       typeBadge(ss),
     ),
     h('div', { class: 'muted small' }, formSummary(ss) || '—'),
@@ -67,7 +67,7 @@ function renderList(ctx) {
               h(
                 'div',
                 { class: 'spread' },
-                h('strong', null, formatDate(ss.date, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })),
+                h('strong', null, formatDate(ss.date, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }), ss.time ? ` · ${ss.time}` : ''),
                 typeBadge(ss),
               ),
               h(
@@ -123,7 +123,7 @@ function renderFormDetail(ctx, ss) {
         h(
           'div',
           { class: 'grow' },
-          h('h1', { class: 'page-title sm' }, formatDate(ss.date, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })),
+          h('h1', { class: 'page-title sm' }, formatDate(ss.date, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }), ss.time ? ` · ${ss.time}` : ''),
           h('div', { class: 'muted small' }, `${TYPE_LABELS[ss.type]} session`),
         ),
       ),
@@ -195,7 +195,7 @@ function renderDetail(ctx, ss) {
         h(
           'div',
           { class: 'grow' },
-          h('h1', { class: 'page-title sm' }, formatDate(ss.date, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })),
+          h('h1', { class: 'page-title sm' }, formatDate(ss.date, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }), ss.time ? ` · ${ss.time}` : ''),
           h('div', { class: 'muted small' }, `${TYPE_LABELS[sessionType(ss)]} · ${ss.distance} m · ${faceLabel(ss.face)} · ${st.arrows} arrows${ss.minutes != null ? ` · ${formatDuration(ss.minutes)}` : ''}${snapshot ? ` · ${snapshot.name}` : ''}`),
         ),
       ),

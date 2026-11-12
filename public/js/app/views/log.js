@@ -21,7 +21,7 @@ import { icons } from '../icons.js';
 import { card, chip, sectionLabel, gearPicker, gearCard } from './common.js';
 import { gearChoices, gearForChoice } from '../gearFields.js';
 import { faceSheet, faceViewBox } from './face.js';
-import { SESSION_TYPES, TYPE_LABELS, isScored } from '../sessionTypes.js';
+import { SESSION_TYPES, TYPE_LABELS, isScored, hourMinute } from '../sessionTypes.js';
 import { emptyForm, formSections } from './sessionForms.js';
 
 export function findActive(repo) {
@@ -128,6 +128,73 @@ function renderSetup(ctx, type, active = null) {
     0,
   );
 
+  // When: now by default; an earlier date / time logs the session afterwards (no running timer).
+  // Fields left untouched follow the clock, so a draft kept open is not dated when it was opened.
+  const when = setup.when || {};
+  const whenDate = when.date || todayIso();
+  const whenTime = when.time || hourMinute(new Date());
+  const past = L.isPastStart(whenDate, whenTime);
+  const setWhen = (patch) => set({ when: { ...when, ...patch } });
+  const whenSection = h(
+    'section',
+    { class: 'setup-section', 'aria-labelledby': 'lbl-when' },
+    h(
+      'div',
+      { class: 'spread align-center' },
+      sectionLabel('When', 'lbl-when'),
+      when.date || when.time
+        ? h('button', { type: 'button', class: 'btn btn-text btn-sm', dataset: { fk: 'when-now' }, onClick: () => set({ when: null, pastMinutes: null }) }, 'Now')
+        : null,
+    ),
+    h(
+      'div',
+      { class: 'grid-2' },
+      h('input', {
+        class: 'input',
+        type: 'date',
+        'aria-label': 'Date',
+        max: todayIso(),
+        value: whenDate,
+        dataset: { fk: 'when-date' },
+        onChange: (e) => e.target.value && setWhen({ date: e.target.value }),
+      }),
+      h('input', {
+        class: 'input',
+        type: 'time',
+        'aria-label': 'Start time',
+        value: whenTime,
+        dataset: { fk: 'when-time' },
+        onChange: (e) => e.target.value && setWhen({ time: e.target.value }),
+      }),
+    ),
+    // a scored session logged afterwards: its duration is typed in, the timer stays stopped
+    past && isScored(type)
+      ? h(
+          'label',
+          { class: 'field' },
+          h('span', { class: 'field-label' }, 'Duration'),
+          h(
+            'div',
+            { class: 'input-suffix' },
+            h('input', {
+              class: 'input',
+              type: 'number',
+              inputmode: 'numeric',
+              min: 0,
+              value: setup.pastMinutes ?? '',
+              dataset: { fk: 'past-minutes' },
+              onInput: (e) => {
+                const n = parseInt(e.target.value, 10);
+                quiet({ pastMinutes: Number.isFinite(n) && n >= 0 ? n : null });
+              },
+            }),
+            h('span', { class: 'muted small' }, 'min'),
+          ),
+        )
+      : null,
+    past ? h('p', { class: 'muted small' }, 'Logged afterwards: no running timer.') : null,
+  );
+
   // equipment: the Gear tab's setup by default, or any saved setup (not asked for mental sessions)
   const snapshots = ctx.repo.list('gearSnapshots', { sort: (a, b) => b.createdAt.localeCompare(a.createdAt) });
   const gearOpts = gearChoices({ settings, snapshots });
@@ -160,7 +227,9 @@ function renderSetup(ctx, type, active = null) {
     const { distance, face, arrowsPerEnd } = setup;
     ctx.repo.saveSettings({ lastSetup: { distance, face, arrowsPerEnd } });
     const session = L.createSession({
-      date: todayIso(),
+      date: whenDate,
+      time: whenTime,
+      pastMinutes: past ? (setup.pastMinutes ?? 0) : null,
       type,
       distance,
       face,
@@ -221,17 +290,18 @@ function renderSetup(ctx, type, active = null) {
     const fields = currentForm();
     const all = ctx.repo.getSettings().formTimers || {};
     // minutes typed by hand win over the timer
-    const minutes = fields.minutes ?? (timed && all[type] ? Math.round(L.timerElapsed(all[type]) / 60000) : null);
+    const minutes = fields.minutes ?? (timed && !past && all[type] ? Math.round(L.timerElapsed(all[type]) / 60000) : null);
     const gear = type === 'mental' ? {} : chosenGear();
-    const saved = ctx.save('sessions', { type, status: 'finished', ...fields, date: fields.date || todayIso(), minutes, ...gear });
+    const saved = ctx.save('sessions', { type, status: 'finished', ...fields, date: whenDate, time: whenTime, minutes, ...gear });
     if (!saved) return;
     if (timed) ctx.repo.saveSettings({ formTimers: { ...all, [type]: null } });
-    ctx.ui.quietSet({ setup: { ...setup, forms: { ...setup.forms, [type]: null } } });
+    ctx.ui.quietSet({ setup: { ...setup, when: null, forms: { ...setup.forms, [type]: null } } });
     ctx.navigate(`history/${saved.id}`);
   };
 
   const body = isScored(type)
     ? [
+        whenSection,
         h(
           'section',
           { class: 'setup-section', 'aria-labelledby': 'lbl-dist' },
@@ -296,7 +366,8 @@ function renderSetup(ctx, type, active = null) {
         h('button', { type: 'button', class: 'btn btn-primary btn-xl', onClick: start }, T.start),
       ]
     : [
-        timed
+        whenSection,
+        timed && !past
           ? h(
               'div',
               { class: 'spread align-center' },
@@ -304,7 +375,8 @@ function renderSetup(ctx, type, active = null) {
               timerButton(formTimer, toggleFormTimer),
             )
           : null,
-        ...formSections(type, form, changeForm),
+        // the When section above sets the date
+        ...formSections(type, form, changeForm, { withDate: false }),
         gearSection,
         h('button', { type: 'button', class: 'btn btn-primary btn-xl', onClick: saveForm }, 'Save session'),
       ];

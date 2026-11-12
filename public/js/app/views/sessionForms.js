@@ -26,7 +26,7 @@ const toInt = (v) => {
  * was stored without re-rendering is never overwritten by a later tap. Typing does not re-render (the
  * field keeps focus); taps do.
  */
-export function formSections(type, value, change) {
+export function formSections(type, value, change, { withDate = true } = {}) {
   const numberField = (label, key, fk, { suffix = '' } = {}) =>
     h(
       'label',
@@ -116,6 +116,7 @@ export function formSections(type, value, change) {
   if (type === 'manual') {
     // typed in afterwards: the day, then the arrows and / or the duration
     return [
+      withDate &&
       h(
         'label',
         { class: 'field' },

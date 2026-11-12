@@ -5,13 +5,13 @@ import { faceLabel } from '../scoring.js';
 import { computeStats } from '../stats.js';
 import { icons } from '../icons.js';
 import { card } from './common.js';
-import { TYPE_LABELS, isScored, sessionType, formSummary } from '../sessionTypes.js';
+import { TYPE_LABELS, isScored, sessionType, formSummary, newestFirst } from '../sessionTypes.js';
 import { findActive } from './log.js';
 
 const lastFinished = (repo) =>
   repo.list('sessions', {
     filter: (x) => x.status === 'finished',
-    sort: (a, b) => (b.date + b.createdAt).localeCompare(a.date + a.createdAt),
+    sort: newestFirst,
   });
 
 export function renderDashboard(ctx) {

@@ -24,6 +24,21 @@ export function isScored(type) {
 
 export const sessionType = (session) => session.type || 'training';
 
+const pad2 = (n) => String(n).padStart(2, '0');
+/** Local HH:MM of a Date (or ISO string); '' when it is not a date. */
+export function hourMinute(d) {
+  const t = d instanceof Date ? d : new Date(d ?? NaN);
+  return Number.isNaN(t.getTime()) ? '' : `${pad2(t.getHours())}:${pad2(t.getMinutes())}`;
+}
+export const isTime = (v) => typeof v === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(v);
+
+/**
+ * Newest first by when the session took place: its date and start time (sessions logged before the
+ * time was recorded use the time they were created).
+ */
+const sortKey = (s) => `${s.date} ${s.time || hourMinute(s.createdAt)} ${s.createdAt || ''}`;
+export const newestFirst = (a, b) => sortKey(b).localeCompare(sortKey(a));
+
 /** Bow-specific strength drills. `hold`: the drill has a hold time in seconds. */
 export const DRILLS = [
   { id: 'spt', label: 'SPT holds', hold: true },

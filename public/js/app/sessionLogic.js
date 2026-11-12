@@ -22,12 +22,16 @@ export function createSession({
   gearSnapshotId = null,
   type = 'training',
   competition = null,
+  time = null,
+  // logged afterwards: the timer stays stopped at the duration typed in (minutes), instead of running
+  pastMinutes = null,
   now = new Date(),
 }) {
   return {
     type,
     ...(type === 'competition' ? { competition: competition || { event: '', round: '', conditions: '', placement: '' } } : {}),
     date,
+    ...(time ? { time } : {}),
     distance,
     face,
     arrowsPerEnd,
@@ -41,8 +45,20 @@ export function createSession({
     gearSnapshotId,
     // the timer runs from the start; it keeps counting while the app is closed (it is a start time,
     // not a ticking counter) until it is paused
-    timer: { running: true, startedAt: now.toISOString(), elapsedMs: 0 },
+    timer:
+      pastMinutes == null
+        ? { running: true, startedAt: now.toISOString(), elapsedMs: 0 }
+        : { running: false, startedAt: null, elapsedMs: pastMinutes * 60000 },
   };
+}
+
+/** A start this long before now is a session logged afterwards (no running timer). */
+export const PAST_START_MS = 15 * 60 * 1000;
+
+/** True when the local date + HH:MM lies more than PAST_START_MS before `now`. */
+export function isPastStart(date, time, now = new Date()) {
+  const t = new Date(`${date}T${time || '00:00'}`).getTime();
+  return Number.isFinite(t) && now.getTime() - t > PAST_START_MS;
 }
 
 const clone = (s) => structuredClone(s);
