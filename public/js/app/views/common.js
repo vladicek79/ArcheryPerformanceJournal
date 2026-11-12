@@ -4,6 +4,7 @@ import { zoneOf } from '../scoring.js';
 import { RUBRIC, T } from '../strings.js';
 import { icons } from '../icons.js';
 import { gearChoices, gearForChoice } from '../gearFields.js';
+import { isScored } from '../sessionTypes.js';
 
 export const scoreChip = (v, extra = '') => h('span', { class: `score-chip z-${zoneOf(v)} ${extra}` }, v == null ? '' : String(v));
 
@@ -84,6 +85,33 @@ export function whenCard(ctx, ss) {
         onChange: (e) => change({ time: e.target.value || null }),
       }),
     ),
+    // scored sessions take their duration from the timer; it can be corrected here
+    // (the other types have a Duration field in their form)
+    isScored(ss.type)
+      ? h(
+          'label',
+          { class: 'field' },
+          h('span', { class: 'field-label' }, 'Duration'),
+          h(
+            'div',
+            { class: 'input-suffix' },
+            h('input', {
+              class: 'input',
+              type: 'number',
+              inputmode: 'numeric',
+              min: 0,
+              max: 1440,
+              value: ss.minutes ?? '',
+              dataset: { fk: 'edit-minutes' },
+              onChange: (e) => {
+                const n = parseInt(e.target.value, 10);
+                change({ minutes: Number.isFinite(n) && n >= 0 ? n : null });
+              },
+            }),
+            h('span', { class: 'muted small' }, 'min'),
+          ),
+        )
+      : null,
   );
 }
 
