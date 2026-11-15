@@ -20,7 +20,7 @@ export const T = {
   appTitle: 'Performance Journal',
   grades: 'Grades',
   settings: 'Settings',
-  tabs: { log: 'Log', dashboard: 'Dashboard', history: 'History', insights: 'Insights', gear: 'Gear', sights: 'Sights' },
+  tabs: { log: 'Log', dashboard: 'Dashboard', history: 'History', insights: 'Insights', gear: 'Gear', sights: 'Sights', settings: 'Settings' },
   inProgress: (what, ends) => `Session in progress: ${what}, ${ends} ${ends === 1 ? 'end' : 'ends'} saved.`,
   continueSession: 'Continue',
   confirmReplaceFinish: 'Finish the session in progress (saved ends are kept, the unsaved end is dropped) and start a new one?',

@@ -1,5 +1,6 @@
 // History tab: training log list → session detail (HANDOFF §6).
 import { h, s, formatDate } from '../../core/dom.js';
+import { confirmDialog } from './confirm.js';
 import { faceLabel, sheetPoint, isMultiSpot, spotCentres } from '../scoring.js';
 import { computeStats, sumArrows, fmt } from '../stats.js';
 import { T } from '../strings.js';
@@ -107,8 +108,9 @@ function renderFormDetail(ctx, ss) {
     const cur = ctx.repo.get('sessions', ss.id);
     if (cur && ctx.save('sessions', { ...cur, ...update(cur) }) && rerender) ctx.rerender();
   };
-  const del = () => {
-    if (!confirm(T.confirmDeleteSession)) return;
+  const del = async () => {
+    const ok = await confirmDialog({ title: 'Delete session?', message: T.confirmDeleteSession, confirmLabel: T.delete, danger: true });
+    if (!ok) return;
     ctx.remove('sessions', ss.id);
     ctx.navigate('history');
   };
@@ -179,8 +181,9 @@ function renderDetail(ctx, ss) {
     ['M1–2 %', st.programPct == null ? '–' : `${st.programPct}%`],
   ];
 
-  const del = () => {
-    if (!confirm(T.confirmDeleteSession)) return;
+  const del = async () => {
+    const ok = await confirmDialog({ title: 'Delete session?', message: T.confirmDeleteSession, confirmLabel: T.delete, danger: true });
+    if (!ok) return;
     ctx.remove('sessions', ss.id);
     ctx.navigate('history');
   };

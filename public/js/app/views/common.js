@@ -5,6 +5,7 @@ import { RUBRIC, T } from '../strings.js';
 import { icons } from '../icons.js';
 import { gearChoices, gearForChoice } from '../gearFields.js';
 import { isScored } from '../sessionTypes.js';
+import { datePicker, timePicker } from './pickers.js';
 
 export const scoreChip = (v, extra = '') => h('span', { class: `score-chip z-${zoneOf(v)} ${extra}` }, v == null ? '' : String(v));
 
@@ -54,6 +55,9 @@ export function guideSheet(onClose) {
   };
 }
 
+/** Dates that already have a session (marked with a dot in the date picker). */
+export const sessionDates = (ctx) => new Set(ctx.repo.list('sessions').map((s) => s.date));
+
 /** Date and start time of a saved session, editable in History (a cleared time is removed). */
 export function whenCard(ctx, ss) {
   const change = (patch) => {
@@ -66,23 +70,20 @@ export function whenCard(ctx, ss) {
     h(
       'div',
       { class: 'grid-2' },
-      h('input', {
-        class: 'input',
-        type: 'date',
-        'aria-label': 'Date',
-        max: todayIso(),
+      datePicker({
+        label: 'Date',
         value: ss.date,
-        dataset: { fk: 'edit-date' },
-        // a cleared date picker keeps the stored date
-        onChange: (e) => (e.target.value ? change({ date: e.target.value }) : (e.target.value = ss.date)),
+        max: todayIso(),
+        marks: sessionDates(ctx),
+        fk: 'edit-date',
+        onChange: (date) => change({ date }),
       }),
-      h('input', {
-        class: 'input',
-        type: 'time',
-        'aria-label': 'Start time',
+      timePicker({
+        label: 'Start time',
         value: ss.time || '',
-        dataset: { fk: 'edit-time' },
-        onChange: (e) => change({ time: e.target.value || null }),
+        clearable: true,
+        fk: 'edit-time',
+        onChange: (time) => change({ time }),
       }),
     ),
     // scored sessions take their duration from the timer; it can be corrected here

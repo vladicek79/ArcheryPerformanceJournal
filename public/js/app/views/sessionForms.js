@@ -24,8 +24,11 @@ const toInt = (v) => {
  * change: `update(current) → patch` runs on the current fields (not the rendered ones), so typing that
  * was stored without re-rendering is never overwritten by a later tap. Typing does not re-render (the
  * field keeps focus); taps do.
+ * `live`: the session is being shot now (New session page with a running timer) — a blank bale count
+ * is then tapped up with big +1 / +3 / +6 buttons instead of typed. Editing a saved one keeps the field.
+ * `timer`: the session timer, shown on the count's row (right of it).
  */
-export function formSections(type, value, change) {
+export function formSections(type, value, change, { live = false, timer = null } = {}) {
   const numberField = (label, key, fk, { suffix = '' } = {}) =>
     h(
       'label',
@@ -81,6 +84,82 @@ export function formSections(type, value, change) {
         onInput: (e) => change(() => ({ note: e.target.value }), { rerender: false }),
       }),
     );
+
+  if (type === 'blank' && live) {
+    // counted while shooting: the count is a big label, tapped up with +1 / +3 / +6. Taps do not
+    // re-render the page; the label is updated in place and pops, and a floating "+n" rises from it.
+    const count = h(
+      'output',
+      { class: 'arrow-count', 'aria-live': 'polite', dataset: { fk: 'arrows-count' } },
+      String(value.arrows || 0),
+    );
+    const countBox = h('div', { class: 'arrow-count-box' }, count, h('span', { class: 'arrow-count-unit' }, 'arrows'));
+    const replay = (el, cls) => {
+      el.classList.remove(cls);
+      void el.offsetWidth; // restart the animation on quick repeated taps
+      el.classList.add(cls);
+    };
+    let minusBtn;
+    const add = (n, btn) => {
+      let next = 0;
+      let applied = 0;
+      change(
+        (cur) => {
+          next = Math.max(0, (cur.arrows || 0) + n);
+          applied = next - (cur.arrows || 0);
+          return { arrows: next };
+        },
+        { rerender: false },
+      );
+      count.textContent = String(next);
+      minusBtn.disabled = next === 0;
+      if (!applied) return;
+      replay(count, applied > 0 ? 'is-bumped' : 'is-dropped');
+      replay(btn, applied > 0 ? 'is-flashed' : 'is-flashed-minus');
+      const fly = h('span', { class: ['arrow-count-fly', applied < 0 && 'is-minus'], 'aria-hidden': 'true' }, applied > 0 ? `+${applied}` : `−${-applied}`);
+      fly.addEventListener('animationend', () => fly.remove());
+      countBox.append(fly);
+      if (navigator.vibrate) navigator.vibrate(15);
+    };
+    minusBtn = h(
+      'button',
+      {
+        type: 'button',
+        class: 'btn btn-outline arrow-add-btn arrow-minus-btn',
+        'aria-label': 'Remove 1 arrow',
+        disabled: !value.arrows,
+        dataset: { fk: 'arrows-minus-1' },
+        onClick: (e) => add(-1, e.currentTarget),
+      },
+      '−1',
+    );
+    return [
+      h(
+        'section',
+        { class: 'setup-section arrow-counter', 'aria-label': 'Arrows shot' },
+        h('div', { class: 'arrow-count-row' }, countBox, timer),
+        h(
+          'div',
+          { class: 'arrow-add-row' },
+          minusBtn,
+          [1, 3, 6].map((n) =>
+            h(
+              'button',
+              {
+                type: 'button',
+                class: 'btn btn-outline arrow-add-btn',
+                'aria-label': `Add ${n} ${n === 1 ? 'arrow' : 'arrows'}`,
+                dataset: { fk: `arrows-add-${n}` },
+                onClick: (e) => add(n, e.currentTarget),
+              },
+              `+${n}`,
+            ),
+          ),
+        ),
+      ),
+      // duration and note are asked when the session is saved (see saveForm in log.js)
+    ];
+  }
 
   if (type === 'blank') {
     // only the number of arrows: no score, no target face

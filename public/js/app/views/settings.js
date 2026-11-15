@@ -1,12 +1,19 @@
 // Settings: logging preferences, backup / restore and storage diagnostics (ARCHITECTURE §6.6, §8).
 import { h } from '../../core/dom.js';
+import { confirmDialog } from './confirm.js';
 import { APP_VERSION } from '../../config.js';
 import { exportBackup, parseBackup } from '../../backup/backup.js';
 import { storageInfo } from '../../pwa/updates.js';
-import { ACCENTS } from '../collections.js';
+import { ACCENTS, INK_ACCENT } from '../collections.js';
 import { card } from './common.js';
+import { icons } from '../icons.js';
 
 const COLLECTION_LABELS = { sessions: 'Sessions', gearSnapshots: 'Gear snapshots', sightMarks: 'Sight marks', competitions: 'Competitions' };
+const THEMES = [
+  ['system', 'System', icons.device],
+  ['light', 'Light', icons.sun],
+  ['dark', 'Dark', icons.moon],
+];
 const ACCENT_NAMES = { '#0B6E4F': 'Green', '#14181C': 'Ink', '#1D4ED8': 'Blue', '#B45309': 'Amber' };
 
 export function renderSettings(ctx) {
@@ -43,8 +50,17 @@ export function renderSettings(ctx) {
     }
   };
 
-  const applyImport = (mode) => {
-    if (mode === 'replace' && !confirm('Replace all data on this device with the backup? A safety copy is kept so you can undo.')) return;
+  const applyImport = async (mode) => {
+    if (
+      mode === 'replace' &&
+      !(await confirmDialog({
+        title: 'Replace all data?',
+        message: 'All data on this device is replaced with the backup. A safety copy is kept so you can undo.',
+        confirmLabel: 'Replace',
+        danger: true,
+      }))
+    )
+      return;
     try {
       ctx.repo.importDocument(pending.parsed, { mode });
       ctx.ui.set({ importPreview: null });
@@ -64,6 +80,30 @@ export function renderSettings(ctx) {
       card(
         { 'aria-labelledby': 'set-log' },
         h('h2', { class: 'card-title', id: 'set-log' }, 'Appearance'),
+        h('div', { class: 'field-label', id: 'lbl-theme' }, 'Theme'),
+        h(
+          'div',
+          { class: 'theme-switch', role: 'group', 'aria-labelledby': 'lbl-theme' },
+          THEMES.map(([id, label, icon]) =>
+            h(
+              'button',
+              {
+                type: 'button',
+                class: 'theme-opt',
+                'aria-pressed': String((settings.theme || 'system') === id),
+                dataset: { fk: `theme-${id}` },
+                onClick: () => {
+                  // a short cross-fade between the themes
+                  document.documentElement.classList.add('theme-switching');
+                  setTimeout(() => document.documentElement.classList.remove('theme-switching'), 250);
+                  if (ctx.saveSettings({ theme: id })) ctx.rerender();
+                },
+              },
+              icon(),
+              h('span', null, label),
+            ),
+          ),
+        ),
         h('div', { class: 'field-label', id: 'lbl-accent' }, 'Accent colour'),
         h(
           'div',
@@ -72,7 +112,8 @@ export function renderSettings(ctx) {
             h('button', {
               type: 'button',
               class: 'swatch',
-              style: { '--swatch': c },
+              // Ink is shown as it looks in the current theme (light in dark mode)
+              style: { '--swatch': c === INK_ACCENT ? 'var(--ink)' : c },
               'aria-label': ACCENT_NAMES[c] || c,
               'aria-pressed': String(settings.accent === c),
               dataset: { fk: `accent-${c}` },
@@ -127,8 +168,13 @@ export function renderSettings(ctx) {
               {
                 type: 'button',
                 class: 'btn btn-text',
-                onClick: () => {
-                  if (!confirm('Restore the data as it was before the last Replace import?')) return;
+                onClick: async () => {
+                  const ok = await confirmDialog({
+                    title: 'Undo the last import?',
+                    message: 'The data is restored as it was before the last Replace import.',
+                    confirmLabel: 'Restore',
+                  });
+                  if (!ok) return;
                   ctx.repo.undoImport();
                   ctx.toast('Last import undone.');
                 },
@@ -207,8 +253,13 @@ function syncCard(ctx) {
         {
           type: 'button',
           class: 'btn btn-outline grow-1',
-          onClick: () => {
-            if (!confirm('Stop syncing on this device? The journal stays on this device and in Drive.')) return;
+          onClick: async () => {
+            const ok = await confirmDialog({
+              title: 'Stop syncing?',
+              message: 'Sync stops on this device. The journal stays on this device and in Drive.',
+              confirmLabel: 'Stop syncing',
+            });
+            if (!ok) return;
             s.signOut();
             ctx.rerender();
           },

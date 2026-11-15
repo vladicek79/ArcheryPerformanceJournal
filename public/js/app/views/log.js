@@ -1,5 +1,6 @@
 // Log tab: new session setup → arrow-by-arrow logging with the M/S grading sheet (HANDOFF §3).
 import { h, s, todayIso } from '../../core/dom.js';
+import { confirmDialog } from './confirm.js';
 import {
   DISTANCES,
   SETUP_FACES,
@@ -18,7 +19,8 @@ import { sumArrows, computeStats, fmt } from '../stats.js';
 import * as L from '../sessionLogic.js';
 import { T } from '../strings.js';
 import { icons } from '../icons.js';
-import { card, chip, sectionLabel, gearPicker, gearCard } from './common.js';
+import { card, chip, sectionLabel, gearPicker, gearCard, sessionDates } from './common.js';
+import { datePicker, timePicker } from './pickers.js';
 import { gearChoices, gearForChoice } from '../gearFields.js';
 import { faceSheet, faceViewBox } from './face.js';
 import { SESSION_TYPES, TYPE_LABELS, isScored, hourMinute } from '../sessionTypes.js';
@@ -58,7 +60,8 @@ const TYPE_HINTS = {
 };
 
 function renderTypeChoice(ctx) {
-  const chosen = ctx.ui.get().newType || 'training';
+  // tapping a type opens it straight away; the last one picked is marked
+  const last = ctx.ui.get().newType;
   return {
     content: h(
       'div',
@@ -73,25 +76,27 @@ function renderTypeChoice(ctx) {
         { class: 'setup-card', 'aria-label': 'Session type' },
         sectionLabel('Session type'),
         h(
-          'div',
-          { class: 'type-list', role: 'radiogroup', 'aria-label': 'Session type' },
+          'nav',
+          { class: 'type-list', 'aria-label': 'Session type' },
           SESSION_TYPES.map((t) =>
             h(
-              'button',
+              'a',
               {
-                type: 'button',
-                role: 'radio',
-                class: 'type-option',
-                'aria-checked': String(chosen === t),
+                class: ['type-option', last === t && 'is-last'],
+                href: `#/new/${t}`,
                 dataset: { fk: `type-${t}` },
-                onClick: () => ctx.ui.set({ newType: t }),
+                onClick: () => ctx.ui.quietSet({ newType: t }),
               },
-              h('span', { class: 'type-option-title' }, TYPE_LABELS[t]),
-              h('span', { class: 'type-option-sub' }, TYPE_HINTS[t]),
+              h(
+                'span',
+                { class: 'type-option-text' },
+                h('span', { class: 'type-option-title' }, TYPE_LABELS[t]),
+                h('span', { class: 'type-option-sub' }, TYPE_HINTS[t]),
+              ),
+              h('span', { class: 'type-option-go', 'aria-hidden': 'true' }, icons.forward()),
             ),
           ),
         ),
-        h('a', { class: 'btn btn-primary btn-xl', href: `#/new/${chosen}`, dataset: { fk: 'start-type' } }, T.start),
       ),
     ),
   };
@@ -149,22 +154,19 @@ function renderSetup(ctx, type, active = null) {
     h(
       'div',
       { class: 'grid-2' },
-      h('input', {
-        class: 'input',
-        type: 'date',
-        'aria-label': 'Date',
-        max: todayIso(),
+      datePicker({
+        label: 'Date',
         value: whenDate,
-        dataset: { fk: 'when-date' },
-        onChange: (e) => e.target.value && setWhen({ date: e.target.value }),
+        max: todayIso(),
+        marks: sessionDates(ctx),
+        fk: 'when-date',
+        onChange: (date) => setWhen({ date }),
       }),
-      h('input', {
-        class: 'input',
-        type: 'time',
-        'aria-label': 'Start time',
+      timePicker({
+        label: 'Start time',
         value: whenTime,
-        dataset: { fk: 'when-time' },
-        onChange: (e) => e.target.value && setWhen({ time: e.target.value }),
+        fk: 'when-time',
+        onChange: (time) => time && setWhen({ time }),
       }),
     ),
     // a scored session logged afterwards: its duration is typed in, the timer stays stopped
@@ -214,12 +216,19 @@ function renderSetup(ctx, type, active = null) {
           }),
         );
 
-  const start = () => {
+  const start = async () => {
     // Only one session runs at a time: an in-progress session is finished (saved ends kept) or,
     // if it has no saved ends, discarded.
     const running = findActive(ctx.repo);
     if (running) {
-      if (!confirm(L.canFinish(running) ? T.confirmReplaceFinish : T.confirmReplaceDiscard)) return;
+      const finish = L.canFinish(running);
+      const ok = await confirmDialog({
+        title: 'A session is in progress',
+        message: finish ? T.confirmReplaceFinish : T.confirmReplaceDiscard,
+        confirmLabel: finish ? 'Finish & start' : 'Discard & start',
+        danger: !finish,
+      });
+      if (!ok) return;
       if (L.canFinish(running)) {
         if (!ctx.save('sessions', L.finishSession(running))) return;
       } else if (!ctx.remove('sessions', running.id)) return;
@@ -286,11 +295,66 @@ function renderSetup(ctx, type, active = null) {
     ctx.rerender();
   };
 
-  const saveForm = () => {
-    const fields = currentForm();
+  const timerMinutes = () => {
     const all = ctx.repo.getSettings().formTimers || {};
-    // minutes typed by hand win over the timer
-    const minutes = fields.minutes ?? (timed && !past && all[type] ? Math.round(L.timerElapsed(all[type]) / 60000) : null);
+    return timed && !past && all[type] ? Math.round(L.timerElapsed(all[type]) / 60000) : null;
+  };
+
+  const formTimerRunning = () => !!(ctx.repo.getSettings().formTimers || {})[type]?.running;
+
+  // Blank bale shot now: the duration (from the timer, editable) and the note are asked on Save.
+  // The timer is paused while the dialog is open, and runs on again if it is cancelled.
+  const askBlankDetails = async () => {
+    const wasRunning = formTimerRunning();
+    if (wasRunning) toggleFormTimer();
+    const fields = currentForm();
+    const minutesInput = h('input', {
+      class: 'input',
+      type: 'number',
+      inputmode: 'numeric',
+      min: 0,
+      max: 1440,
+      value: fields.minutes ?? timerMinutes() ?? '',
+      dataset: { fk: 'save-minutes' },
+    });
+    const noteInput = h('textarea', {
+      rows: 3,
+      class: 'review-text',
+      placeholder: 'What you worked on, how it felt…',
+      value: fields.note || '',
+      dataset: { fk: 'save-note' },
+    });
+    const ok = await confirmDialog({
+      title: 'Save session',
+      message: `${fields.arrows || 0} ${fields.arrows === 1 ? 'arrow' : 'arrows'} at the blank bale.`,
+      confirmLabel: 'Save',
+      icon: 'check',
+      body: [
+        h('label', { class: 'field' }, h('span', { class: 'field-label' }, 'Duration'), h('div', { class: 'input-suffix' }, minutesInput, h('span', { class: 'muted small' }, 'min'))),
+        h('label', { class: 'field' }, h('span', { class: 'field-label' }, 'Note'), noteInput),
+      ],
+    });
+    if (!ok) {
+      if (wasRunning && !formTimerRunning()) toggleFormTimer();
+      return null;
+    }
+    const n = parseInt(minutesInput.value, 10);
+    return { minutes: Number.isFinite(n) && n >= 0 ? n : null, note: noteInput.value };
+  };
+
+  const saveForm = async () => {
+    let fields = currentForm();
+    let minutes;
+    if (type === 'blank' && timed && !past) {
+      const details = await askBlankDetails();
+      if (!details) return;
+      fields = { ...fields, ...details };
+      minutes = details.minutes;
+    } else {
+      // minutes typed by hand win over the timer
+      minutes = fields.minutes ?? timerMinutes();
+    }
+    const all = ctx.repo.getSettings().formTimers || {};
     const gear = type === 'mental' ? {} : chosenGear();
     const saved = ctx.save('sessions', { type, status: 'finished', ...fields, date: whenDate, time: whenTime, minutes, ...gear });
     if (!saved) return;
@@ -367,7 +431,8 @@ function renderSetup(ctx, type, active = null) {
       ]
     : [
         whenSection,
-        timed && !past
+        // blank bale: the timer sits beside the arrow count (in the form), without a label
+        timed && !past && type !== 'blank'
           ? h(
               'div',
               { class: 'spread align-center' },
@@ -375,7 +440,10 @@ function renderSetup(ctx, type, active = null) {
               timerButton(formTimer, toggleFormTimer),
             )
           : null,
-        ...formSections(type, form, changeForm),
+        ...formSections(type, form, changeForm, {
+          live: timed && !past,
+          timer: type === 'blank' && timed && !past ? timerButton(formTimer, toggleFormTimer, { large: true }) : null,
+        }),
         gearSection,
         h('button', { type: 'button', class: 'btn btn-primary btn-xl', onClick: saveForm }, 'Save session'),
       ];
@@ -439,14 +507,14 @@ function stepper({ label, value, canDown, canUp, fk, onStep }) {
 }
 
 /** Timer button (tap to pause / resume). The shown time is refreshed every second by the ticker. */
-function timerButton(timer = null, onToggle) {
+function timerButton(timer = null, onToggle, { large = false } = {}) {
   const tm = timer || { running: false, startedAt: null, elapsedMs: 0 };
   startTimerTicker();
   return h(
     'button',
     {
       type: 'button',
-      class: ['timer-btn', !tm.running && 'is-paused'],
+      class: ['timer-btn', large && 'timer-btn-lg', !tm.running && 'is-paused'],
       'aria-label': tm.running ? 'Pause the session timer' : 'Resume the session timer',
       dataset: { fk: 'timer' },
       onClick: onToggle,
@@ -632,8 +700,9 @@ function renderActive(ctx, session) {
       ctx.navigate(`history/${done.id}`);
     }
   };
-  const discard = () => {
-    if (!confirm(T.confirmDiscard)) return;
+  const discard = async () => {
+    const ok = await confirmDialog({ title: 'Discard session?', message: T.confirmDiscard, confirmLabel: 'Discard', danger: true });
+    if (!ok) return;
     ctx.remove('sessions', session.id);
     ctx.rerender();
   };

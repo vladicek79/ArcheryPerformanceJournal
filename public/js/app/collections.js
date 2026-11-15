@@ -121,6 +121,8 @@ export const collections = {
 
 export const defaultSettings = {
   accent: '#0B6E4F',
+  // 'system' follows the device's light / dark setting; 'light' / 'dark' override it (this device only)
+  theme: 'system',
   defaultInput: 'target',
   askGrades: true,
   gear: {},
@@ -136,5 +138,7 @@ export const defaultSettings = {
 // and would otherwise make a fresh device's settings look newer than the real gear setup.
 export const SYNCED_SETTING_KEYS = ['gear', 'activeSnapshotId', 'loadedSnapshotId'];
 
-export const ACCENTS = ['#0B6E4F', '#14181C', '#1D4ED8', '#B45309'];
+/** The Ink accent follows the text colour, so it is light in dark mode (see applyTheme in main.js). */
+export const INK_ACCENT = '#14181C';
+export const ACCENTS = ['#0B6E4F', INK_ACCENT, '#1D4ED8', '#B45309'];
 export const DEFAULT_SIGHT_DISTANCES = ['18', '30', '50', '60', '70', '90'];

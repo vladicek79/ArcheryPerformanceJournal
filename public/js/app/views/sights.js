@@ -1,5 +1,6 @@
 // Sights tab: sight marks per distance + competition log (HANDOFF §8).
 import { h, formatDate } from '../../core/dom.js';
+import { confirmDialog } from './confirm.js';
 import { T } from '../strings.js';
 import { card } from './common.js';
 
@@ -72,8 +73,14 @@ export function renderSights(ctx) {
                 type: 'button',
                 class: 'btn btn-text danger self-end',
                 'aria-label': `${T.delete} ${c.event || 'competition'}`,
-                onClick: () => {
-                  if (!confirm(T.confirmDeleteComp(c.event || 'this competition'))) return;
+                onClick: async () => {
+                  const ok = await confirmDialog({
+                    title: 'Delete competition?',
+                    message: T.confirmDeleteComp(c.event || 'this competition'),
+                    confirmLabel: T.delete,
+                    danger: true,
+                  });
+                  if (!ok) return;
                   ctx.remove('competitions', c.id);
                   ctx.rerender();
                 },

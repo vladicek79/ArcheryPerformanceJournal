@@ -1,5 +1,6 @@
 // Gear tab: current equipment setup + saved setup snapshots (HANDOFF §7).
 import { h, formatDate, todayIso } from '../../core/dom.js';
+import { confirmDialog } from './confirm.js';
 import { GEAR_GROUPS, GEAR_KEYS, filledCount } from '../gearFields.js';
 import { T } from '../strings.js';
 import { card } from './common.js';
@@ -110,8 +111,12 @@ export function renderGear(ctx) {
                   type: 'button',
                   class: 'btn btn-outline-thin',
                   'aria-label': `${T.load} ${sn.name}`,
-                  onClick: () => {
-                    if (filledCount(ctx.repo.getSettings().gear) && !confirm(T.confirmLoadSnap(sn.name))) return;
+                  onClick: async () => {
+                    if (
+                      filledCount(ctx.repo.getSettings().gear) &&
+                      !(await confirmDialog({ title: 'Load this setup?', message: T.confirmLoadSnap(sn.name), confirmLabel: T.load }))
+                    )
+                      return;
                     if (ctx.saveSettings({ gear: { ...sn.fields }, activeSnapshotId: sn.id, loadedSnapshotId: sn.id })) ctx.rerender();
                   },
                 },
@@ -123,8 +128,9 @@ export function renderGear(ctx) {
                   type: 'button',
                   class: 'btn btn-outline-thin',
                   'aria-label': `${T.delete} ${sn.name}`,
-                  onClick: () => {
-                    if (!confirm(T.confirmDeleteSnap(sn.name))) return;
+                  onClick: async () => {
+                    const ok = await confirmDialog({ title: 'Delete snapshot?', message: T.confirmDeleteSnap(sn.name), confirmLabel: T.delete, danger: true });
+                    if (!ok) return;
                     ctx.remove('gearSnapshots', sn.id);
                     const st = ctx.repo.getSettings();
                     if (st.activeSnapshotId === sn.id || st.loadedSnapshotId === sn.id) {
