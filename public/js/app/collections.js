@@ -1,6 +1,7 @@
 // What the app stores (ARCHITECTURE §6.4). The repository validates before every save and on import.
 import { FACE_IDS, ARROWS_PER_END_MAX, isValidArrowsPerEnd, isValidArrowValue } from './scoring.js';
-import { SESSION_TYPES, DRILL_IDS, MENTAL_TECHNIQUES, EFFORT_MAX, FOCUS_MAX, isScored, countsArrows, isTime } from './sessionTypes.js';
+import { sightErrors, historyErrors } from './gearFields.js';
+import { SESSION_TYPES, DRILL_IDS, MENTAL_TECHNIQUES, EFFORT_MAX, FOCUS_MAX, isScored, countsArrows, isTime, emptyReview, emptyCompetition } from './sessionTypes.js';
 
 const isStr = (v) => typeof v === 'string';
 const isGrade = (g) => g == null || (Number.isInteger(g) && g >= 1 && g <= 5);
@@ -48,7 +49,9 @@ function validateForm(r) {
     else
       r.drills.forEach((d, i) => {
         if (!d || !DRILL_IDS.includes(d.kind)) errs.push(`drill ${i + 1}: unknown drill`);
-        else if (!isOptInt(d.sets, 0, 999) || !isOptInt(d.reps, 0, 9999) || !isOptInt(d.holdSec, 0, 3600)) errs.push(`drill ${i + 1}: invalid numbers`);
+        else if (!isOptInt(d.sets, 0, 999) || !isOptInt(d.reps, 0, 9999) || !isOptInt(d.holdSec, 0, 3600) || !isOptInt(d.restSec, 0, 3600))
+          errs.push(`drill ${i + 1}: invalid numbers`);
+        else if (d.done != null && typeof d.done !== 'boolean') errs.push(`drill ${i + 1}: invalid done mark`);
       });
   } else {
     if (!isOptInt(r.focus, 1, FOCUS_MAX)) errs.push('invalid focus');
@@ -66,9 +69,9 @@ export const collections = {
       if (r.time != null && !isTime(r.time)) errs.push('time must be HH:MM');
       if (!SESSION_TYPES.includes(r.type)) errs.push('invalid session type');
       if (!['active', 'finished'].includes(r.status)) errs.push('invalid status');
-      if (r.review != null && (typeof r.review !== 'object' || !isStr(r.review.good ?? '') || !isStr(r.review.workOn ?? '') || !isStr(r.review.how ?? ''))) errs.push('invalid review');
+      if (r.review != null && (typeof r.review !== 'object' || Object.keys(emptyReview()).some((k) => !isStr(r.review[k] ?? '')))) errs.push('invalid review');
       if (!isScored(r.type)) return [...errs, ...validateForm(r)];
-      if (r.competition != null && (typeof r.competition !== 'object' || ['event', 'round', 'conditions', 'placement'].some((k) => !isStr(r.competition[k] ?? '')))) {
+      if (r.competition != null && (typeof r.competition !== 'object' || Object.keys(emptyCompetition()).some((k) => !isStr(r.competition[k] ?? '')))) {
         errs.push('invalid competition details');
       }
       if (!(Number.isFinite(r.distance) && r.distance > 0)) errs.push('invalid distance');
@@ -92,19 +95,16 @@ export const collections = {
       return errs;
     },
   },
-  gearSnapshots: {
-    defaults: () => ({ name: '', date: '', fields: {} }),
+  // gear setups (stored as `setups` since schema 7; "gear snapshots" before). One is active.
+  setups: {
+    defaults: () => ({ name: '', fields: {}, history: [] }),
     validate(r) {
       const errs = [];
       if (!isStr(r.name) || !r.name.trim()) errs.push('name is required');
-      if (!r.fields || typeof r.fields !== 'object') errs.push('fields must be an object');
+      if (!r.fields || typeof r.fields !== 'object' || Array.isArray(r.fields)) errs.push('fields must be an object');
+      else errs.push(...sightErrors(r.fields.sights));
+      errs.push(...historyErrors(r.history));
       return errs;
-    },
-  },
-  sightMarks: {
-    defaults: () => ({ distance: '', elevation: '', windage: '', note: '' }),
-    validate(r) {
-      return ['distance', 'elevation', 'windage', 'note'].filter((k) => !isStr(r[k])).map((k) => `${k} must be text`);
     },
   },
   competitions: {
@@ -125,20 +125,18 @@ export const defaultSettings = {
   theme: 'system',
   defaultInput: 'target',
   askGrades: true,
-  gear: {},
-  activeSnapshotId: null,
-  // the saved setup the Gear tab was last loaded from (kept while editing, so it can be updated)
-  loadedSnapshotId: null,
+  // the gear setup new sessions use (a record of `setups`; see activeSetup in gearFields.js)
+  activeSetupId: null,
+  // the unit a gear field is shown in where it has two (e.g. { brace: 'cm' }); this device only
+  gearUnits: {},
   lastSetup: { distance: 18, face: '40t', arrowsPerEnd: 3 },
-  sightsSeeded: false,
 };
 
 /** Settings shared between devices by Google Drive sync; all others stay on the device. */
-// Only the gear setup: lastSetup / sightsSeeded change on their own (starting a session, first launch)
-// and would otherwise make a fresh device's settings look newer than the real gear setup.
-export const SYNCED_SETTING_KEYS = ['gear', 'activeSnapshotId', 'loadedSnapshotId'];
+// Only which gear setup is active: the setups themselves sync as a collection. lastSetup changes on
+// its own (starting a session) and would otherwise make a fresh device's settings look newer.
+export const SYNCED_SETTING_KEYS = ['activeSetupId'];
 
 /** The Ink accent follows the text colour, so it is light in dark mode (see applyTheme in main.js). */
 export const INK_ACCENT = '#14181C';
 export const ACCENTS = ['#0B6E4F', INK_ACCENT, '#1D4ED8', '#B45309'];
-export const DEFAULT_SIGHT_DISTANCES = ['18', '30', '50', '60', '70', '90'];

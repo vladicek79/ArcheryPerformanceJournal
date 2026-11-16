@@ -5,7 +5,7 @@ import { isScored, sessionType, countsArrows } from './sessionTypes.js';
 export const RANGES = [
   { id: '30d', label: '30 days', days: 30 },
   { id: '90d', label: '90 days', days: 90 },
-  { id: '1y', label: '12 months', days: 365 },
+  { id: '1y', label: '1 year', days: 365 },
   { id: 'all', label: 'All', days: null },
 ];
 

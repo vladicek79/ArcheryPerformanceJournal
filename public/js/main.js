@@ -3,6 +3,7 @@ import {
   APP_ID,
   APP_ENV,
   STORAGE_KEY,
+  TRASH_DAYS,
   SCHEMA_VERSION,
   GOOGLE_CLIENT_ID,
   DRIVE_SCOPE,
@@ -17,20 +18,26 @@ import { createRepository } from './storage/repository.js';
 import { createLocalStorageAdapter } from './storage/localStorageAdapter.js';
 import { migrations } from './storage/migrations.js';
 import { registerServiceWorker, requestPersistence } from './pwa/updates.js';
-import { collections, defaultSettings, DEFAULT_SIGHT_DISTANCES, SYNCED_SETTING_KEYS, INK_ACCENT } from './app/collections.js';
+import { collections, defaultSettings, SYNCED_SETTING_KEYS } from './app/collections.js';
 import { createGoogleAuth } from './sync/googleAuth.js';
 import { createDriveStore } from './sync/driveStore.js';
 import { createSyncService } from './sync/syncService.js';
 import { createSyncController } from './sync/syncController.js';
 import { T } from './app/strings.js';
 import { icons } from './app/icons.js';
+import * as L from './app/sessionLogic.js';
+import { TYPE_LABELS, sessionType } from './app/sessionTypes.js';
 import { guideSheet } from './app/views/common.js';
-import { renderLog, renderNewSession, logSubtitle } from './app/views/log.js';
+import { renderLog, renderNewSession, askAboutRunningSession, askAboutOpenFormSession } from './app/views/log.js';
+import * as APL from './ui/apl/index.js';
+import { startTimerTicker } from './app/views/timer.js';
+import { createRunningSession } from './app/runningSession.js';
+import { createOpenFormSessions } from './app/openFormSession.js';
+import { createFinishedSessions } from './app/finishedSession.js';
 import { renderDashboard } from './app/views/dashboard.js';
 import { renderInsights } from './app/views/insights.js';
-import { renderHistory } from './app/views/history.js';
+import { renderHistory, askAboutFinishedSession } from './app/views/history.js';
 import { renderGear } from './app/views/gear.js';
-import { renderSights } from './app/views/sights.js';
 import { renderSettings } from './app/views/settings.js';
 
 const repo = createRepository({
@@ -67,7 +74,6 @@ const sync = createSyncController({
   // the status is shown only on Settings; avoid re-rendering (and disturbing typing) elsewhere
   onStatus: () => route.name === 'settings' && shell && renderNow(),
   onPulled: () => {
-    dedupeSeededSightMarks();
     if (shell) renderNow();
   },
 });
@@ -80,42 +86,33 @@ const TABS = [
   ['history', T.tabs.history, icons.history],
   ['insights', T.tabs.insights, icons.insights],
   ['gear', T.tabs.gear, icons.gear],
-  ['sights', T.tabs.sights, icons.sights],
   ['settings', T.tabs.settings, icons.settings],
 ];
-const VIEWS = { home: renderDashboard, insights: renderInsights, log: renderLog, new: renderNewSession, history: renderHistory, gear: renderGear, sights: renderSights, settings: renderSettings };
+const VIEWS = { home: renderDashboard, insights: renderInsights, log: renderLog, new: renderNewSession, history: renderHistory, gear: renderGear, settings: renderSettings };
 
 let route = { name: 'home', params: [] };
 let shell;
 let overlayClose = null;
+let lastReturnFk = null;
 let lastOverlayKey = null;
 
 function buildShell() {
-  const sub = h('div', { class: 'header-sub' });
   const main = h('main', { id: 'main', class: 'main', tabindex: '-1' });
   const banner = h('div', { class: 'banners' });
-  const tabButtons = {};
-  const nav = h(
-    'nav',
-    { class: 'tabbar', 'aria-label': 'Sections' },
-    TABS.map(([name, label, icon]) => {
-      tabButtons[name] = h('a', { href: `#/${name}`, class: 'tab' }, icon(), h('span', null, label));
-      return tabButtons[name];
-    }),
-  );
-  const header = h(
-    'header',
-    { class: 'app-header' },
-    // Grades and Settings are tiles on the Dashboard, the only page that shows this bar
-    h('div', { class: 'brand' }, icons.logo(), h('div', null, h('div', { class: 'brand-title' }, T.appTitle), sub)),
-  );
+  const nav = APL.TabBar({
+    label: 'Sections',
+    items: TABS.map(([name, label, icon]) => ({ id: name, label, icon: icon(), href: `#/${name}` })),
+  });
+  const tabButtons = Object.fromEntries([...nav.querySelectorAll('[data-tab]')].map((el) => [el.dataset.tab, el]));
   const overlay = h('div', { class: 'overlay-root' });
   const toast = h('div', { class: 'toast-root', role: 'status', 'aria-live': 'polite' });
   // the test build (main-test, /test/) is marked on every screen so it is never mistaken for the real journal
   const envBadge = APP_ENV === 'test' ? h('div', { class: 'env-badge', 'aria-label': 'Test environment' }, 'TEST') : null;
-  const app = h('div', { class: ['app', APP_ENV === 'test' && 'env-test'] }, envBadge, header, banner, main, nav, overlay, toast);
+  // sessions still running, shown on every page above the bottom bar (see renderRunning)
+  const running = h('div', { class: 'running-bars apl apl-bar' });
+  const app = h('div', { class: ['app', APP_ENV === 'test' && 'env-test'] }, envBadge, banner, main, running, nav, overlay, toast);
   document.getElementById('app').replaceChildren(app);
-  return { app, header, sub, main, banner, nav, tabButtons, overlay, toast };
+  return { app, main, banner, running, nav, tabButtons, overlay, toast };
 }
 
 function renderNow({ scrollTop = false } = {}) {
@@ -129,11 +126,7 @@ function renderNow({ scrollTop = false } = {}) {
     result = { content: h('div', { class: 'card' }, h('p', { class: 'error' }, `Something went wrong: ${e.message}`)) };
   }
 
-  // header + tabs
-  const subs = { home: T.sub.home, insights: T.sub.insights, log: logSubtitle(repo), new: T.sub.new, history: T.sub.history, gear: T.sub.gear, sights: T.sub.sights, settings: T.sub.settings };
-  shell.sub.textContent = subs[route.name] || '';
-  // The top bar (title, Grades, Settings) is shown only on the Dashboard tab, to save space elsewhere.
-  shell.header.hidden = route.name !== 'home';
+  // tabs
   // Insights uses the full width of a desktop browser
   shell.app.classList.toggle('app-wide', route.name === 'insights');
   for (const [name, el] of Object.entries(shell.tabButtons)) {
@@ -145,6 +138,7 @@ function renderNow({ scrollTop = false } = {}) {
   shell.main.replaceChildren(result.content);
   if (scrollTop) shell.main.scrollTop = 0;
   renderBanners();
+  renderRunning();
 
   // overlays: the grading sheet comes from the view; the guide is global
   const st = ui.get();
@@ -160,39 +154,91 @@ function renderNow({ scrollTop = false } = {}) {
 function renderOverlay(overlay) {
   const opened = overlay && lastOverlayKey !== overlay.key;
   const returnFocus = !overlay && lastOverlayKey;
+  const returnFk = lastReturnFk;
   lastOverlayKey = overlay ? overlay.key : null;
+  lastReturnFk = overlay ? overlay.returnFk || null : null;
   overlayClose = overlay ? overlay.onClose : null;
-  for (const el of [shell.main, shell.nav, shell.banner]) el.inert = !!overlay;
-  shell.header.inert = !!overlay;
+  for (const el of [shell.main, shell.nav, shell.banner, shell.running]) el.inert = !!overlay;
   if (!overlay) {
     shell.overlay.replaceChildren();
     shell.overlay.className = 'overlay-root';
     if (returnFocus && !document.activeElement?.closest?.('.main')) {
       // keep the user's place: focus returns to the active slot or the main area
-      const target = shell.main.querySelector('.slot.is-active') || shell.main;
+      // (or to the control that opened the overlay, when it names one: `returnFk`)
+      const opener = returnFk && shell.main.querySelector(`[data-fk="${CSS.escape(returnFk)}"]`);
+      const target = opener || shell.main.querySelector('.slot.is-active') || shell.main;
       target.focus({ preventScroll: true });
     }
     return;
   }
-  shell.overlay.className = `overlay-root open${overlay.below === 'header' ? ' below-header' : ''}`;
+  shell.overlay.className = 'overlay-root open';
   const backdrop = h('div', { class: 'backdrop', onClick: () => overlayClose?.() });
   shell.overlay.replaceChildren(backdrop, overlay.node);
   const first = overlay.node.querySelector('[data-autofocus]') || overlay.node.querySelector('button');
   if (first && (opened || !overlay.node.contains(document.activeElement))) first.focus({ preventScroll: true });
 }
 
+/**
+ * A strip per session still running (a scored session, or an open blank bale / strength / mental
+ * one), on every page except that session's own, so it can always be reopened.
+ */
+function renderRunning() {
+  const items = [];
+  const bar = ({ href, title, detail, timer, fk }) => {
+    const tm = timer || { running: false, startedAt: null, elapsedMs: 0 };
+    return APL.Banner({
+      href,
+      title,
+      detail,
+      tone: 'accent',
+      indicator: tm.running ? 'live' : 'paused',
+      trailing: h(
+        'span',
+        { class: 'timer-value', dataset: { elapsed: String(tm.elapsedMs || 0), started: tm.running ? tm.startedAt : '' } },
+        L.formatClock(L.timerElapsed(tm)),
+      ),
+      action: { label: T.continueSession },
+      fk,
+    });
+  };
+  const active = ctx.running.get();
+  if (active && route.name !== 'log') {
+    items.push(
+      bar({
+        href: '#/log',
+        title: `${TYPE_LABELS[sessionType(active)]} running`,
+        detail: `${active.distance} m · ${active.ends.length} ${active.ends.length === 1 ? 'end' : 'ends'}`,
+        timer: active.timer,
+        fk: 'running-log',
+      }),
+    );
+  }
+  for (const f of ctx.openForms.list()) {
+    if (route.name === 'new' && route.params[0] === f.type) continue;
+    const arrows = f.draft?.arrows || 0;
+    items.push(
+      bar({
+        href: `#/new/${f.type}`,
+        title: `${TYPE_LABELS[f.type]} running`,
+        detail: f.type === 'blank' ? `${arrows} ${arrows === 1 ? 'arrow' : 'arrows'}` : null,
+        timer: f.timer,
+        fk: `running-${f.type}`,
+      }),
+    );
+  }
+  if (items.length) startTimerTicker();
+  // on the Dashboard, New session sits here too, under the running sessions
+  if (route.name === 'home') {
+    items.push(APL.Button({ children: T.newSession, onClick: () => router.navigate('new'), fk: 'new-session' }));
+  }
+  shell.running.replaceChildren(...items);
+}
+
 function renderBanners() {
   const st = ui.get();
   const items = [];
   if (st.update) {
-    items.push(
-      h(
-        'div',
-        { class: 'banner', role: 'status' },
-        h('span', null, T.newVersion),
-        h('button', { type: 'button', class: 'btn btn-primary btn-sm', onClick: () => st.update() }, T.reload),
-      ),
-    );
+    items.push(APL.Banner({ title: T.newVersion, action: { label: T.reload, onClick: () => st.update(), fk: 'reload' } }));
   }
   shell.banner.replaceChildren(...items);
 }
@@ -200,7 +246,7 @@ function renderBanners() {
 let toastTimer;
 function toast(message) {
   clearTimeout(toastTimer);
-  shell.toast.replaceChildren(h('div', { class: 'toast' }, message));
+  shell.toast.replaceChildren(APL.Toast({ message }));
   toastTimer = setTimeout(() => shell.toast.replaceChildren(), 4000);
 }
 
@@ -218,10 +264,12 @@ const ctx = {
   repo,
   ui,
   rerender: () => renderNow(),
-  navigate: (path) => router.navigate(path),
+  navigate: (path, opts) => router.navigate(path, opts),
   toast,
   save: (name, record) => guard(() => repo.save(name, record)),
   remove: (name, id) => guard(() => (repo.remove(name, id), true)),
+  trash: (name, id) => guard(() => (repo.trash(name, id), true)),
+  restore: (name, id) => guard(() => (repo.restore(name, id), true)),
   saveSettings: (patch) => guard(() => repo.saveSettings(patch)),
   env: APP_ENV,
   sync: {
@@ -237,30 +285,54 @@ const ctx = {
     now: () => sync.request(),
   },
 };
+// the running (scored) session: found, started, finished and discarded in one place
+ctx.running = createRunningSession({
+  repo,
+  save: ctx.save,
+  remove: ctx.remove,
+  saveSettings: ctx.saveSettings,
+  confirm: askAboutRunningSession,
+  requestSync: () => ctx.sync.now(), // a finished session goes to Drive right away (no-op when sync is off)
+  onChange: () => ctx.rerender(),
+});
+// the open form sessions (blank bale / strength / mental): timer, kept draft, saving and discarding
+ctx.openForms = createOpenFormSessions({
+  repo,
+  save: ctx.save,
+  saveSettings: ctx.saveSettings,
+  confirm: askAboutOpenFormSession,
+  onChange: () => ctx.rerender(),
+});
+// the finished sessions (History): edits, Recently deleted, restoring and deleting for good
+ctx.finished = createFinishedSessions({
+  repo,
+  save: ctx.save,
+  trash: ctx.trash,
+  restore: ctx.restore,
+  remove: ctx.remove,
+  confirm: askAboutFinishedSession,
+});
 
 const router = createRouter((r) => {
+  // sight marks moved into the Gear tab (they belong to a setup); old links land there
+  if (r.name === 'sights') {
+    location.replace('#/gear');
+    return;
+  }
   const changed = r.name !== route.name || r.params.join('/') !== route.params.join('/');
   route = r;
-  if (changed) ui.quietSet({ newSightIds: [], importPreview: null });
+  if (changed) ui.quietSet({ importPreview: null, gearMenu: null, gearEdit: null, sightMenu: null, sightEdit: null });
   renderNow({ scrollTop: changed });
   if (changed && auth.configured && auth.isSignedIn() && !auth.getToken()) renewIfSafe();
 });
 
-// Light / dark: 'system' leaves <html> without data-theme, so the CSS follows the device setting.
-// The choice is mirrored to its own key, read by theme-boot.js before the first paint (no flash).
+// Light / dark (APL themes): 'system' leaves <html> without data-theme, so apl-tokens.css follows
+// the device setting. The choice is mirrored to its own key, read by theme-boot.js before the first
+// paint (no flash).
 const darkQuery = matchMedia('(prefers-color-scheme: dark)');
 function applyTheme() {
-  const { accent, theme = 'system' } = repo.getSettings();
+  const { theme = 'system' } = repo.getSettings();
   const root = document.documentElement;
-  // Ink is the text colour: near-black in light mode, light in dark mode, so it stays visible.
-  // It is set by the CSS (data-accent), which picks the variant for the theme; the others are fixed.
-  if (accent === INK_ACCENT) {
-    root.dataset.accent = 'ink';
-    root.style.removeProperty('--accent');
-  } else {
-    delete root.dataset.accent;
-    root.style.setProperty('--accent', accent);
-  }
   if (theme === 'light' || theme === 'dark') root.dataset.theme = theme;
   else delete root.dataset.theme;
   try {
@@ -270,31 +342,9 @@ function applyTheme() {
   }
   // the browser / status bar colour follows the page background
   const ground = getComputedStyle(root).getPropertyValue('--ground').trim();
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', ground || '#14181C');
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', ground || '#0b0e10');
 }
 darkQuery.addEventListener('change', applyTheme);
-
-function seed() {
-  const s = repo.getSettings();
-  if (!s.sightsSeeded) {
-    if (!repo.list('sightMarks').length) {
-      // fixed ids, so the same default row on two devices is one record after sync
-      for (const d of DEFAULT_SIGHT_DISTANCES) repo.save('sightMarks', { id: `seed-${d}`, distance: `${d} m`, elevation: '', windage: '', note: '' });
-    }
-    repo.saveSettings({ sightsSeeded: true });
-  }
-}
-
-/** After a sync, drop untouched default sight rows whose distance another row already covers. */
-function dedupeSeededSightMarks() {
-  const marks = repo.list('sightMarks');
-  const empty = (m) => !(m.elevation.trim() || m.windage.trim() || m.note.trim());
-  for (const m of marks) {
-    if (!m.id.startsWith('seed-') || !empty(m)) continue;
-    const dist = parseInt(m.distance, 10);
-    if (marks.some((o) => o.id !== m.id && parseInt(o.distance, 10) === dist && !(o.id.startsWith('seed-') && empty(o)))) repo.remove('sightMarks', m.id);
-  }
-}
 
 /** Is Google reachable? navigator.onLine is often true on a dead mobile connection. */
 async function googleReachable(timeoutMs = 2500) {
@@ -372,7 +422,12 @@ async function boot() {
     fatal(e.message);
     return;
   }
-  seed();
+  // sessions in Recently deleted for longer than TRASH_DAYS are removed for good
+  try {
+    repo.purgeTrash('sessions', TRASH_DAYS * 24 * 3600 * 1000);
+  } catch (e) {
+    console.error(e);
+  }
   shell = buildShell();
   applyTheme();
   repo.subscribe((c) => {

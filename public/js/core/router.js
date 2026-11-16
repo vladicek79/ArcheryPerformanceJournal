@@ -13,9 +13,15 @@ export function createRouter(onChange) {
       handler();
     },
     current: () => parseHash(location.hash),
-    navigate(path) {
+    /**
+     * Go to `#/path`. `replace`: take the place of the current page in the browser history instead of
+     * adding a step, so the phone's Back does not return to it (a page that is finished with, such as
+     * a session just saved, discarded or deleted).
+     */
+    navigate(path, { replace = false } = {}) {
       const target = `#/${path}`;
       if (location.hash === target) handler();
+      else if (replace) location.replace(`${location.pathname}${location.search}${target}`);
       else location.hash = target;
     },
   };

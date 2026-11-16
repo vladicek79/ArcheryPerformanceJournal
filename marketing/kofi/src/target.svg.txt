@@ -1,0 +1,16 @@
+<g>
+  <circle r="100" fill="#ffffff" stroke="#c9ced2" stroke-width="1" />
+  <circle r="90" fill="#ffffff" stroke="#9aa1a7" stroke-width="0.6" />
+  <circle r="80" fill="#1a1a1a" />
+  <circle r="70" fill="#1a1a1a" stroke="#4a4f53" stroke-width="0.6" />
+  <circle r="60" fill="#00a6d6" />
+  <circle r="50" fill="#00a6d6" stroke="#00799c" stroke-width="0.6" />
+  <circle r="40" fill="#ee4049" />
+  <circle r="30" fill="#ee4049" stroke="#b02a31" stroke-width="0.6" />
+  <circle r="20" fill="#ffe14d" />
+  <circle r="10" fill="#ffe14d" stroke="#c9a800" stroke-width="0.6" />
+  <circle r="5" fill="none" stroke="#c9a800" stroke-width="0.6" />
+  <g class="hit"><circle cx="-3" cy="2" r="3" /><line x1="-3" y1="2" x2="-46" y2="-58" /><rect x="-62" y="-74" width="30" height="20" rx="6" /><text x="-47" y="-60">X</text></g>
+  <g class="hit"><circle cx="14" cy="-8" r="3" /><line x1="14" y1="-8" x2="58" y2="-62" /><rect x="44" y="-78" width="30" height="20" rx="6" /><text x="59" y="-64">10</text></g>
+  <g class="hit"><circle cx="-16" cy="22" r="3" /><line x1="-16" y1="22" x2="-62" y2="72" /><rect x="-78" y="62" width="30" height="20" rx="6" /><text x="-63" y="76">9</text></g>
+</g>

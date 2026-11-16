@@ -1,9 +1,9 @@
 // Scoring rules (HANDOFF §5). Pure functions, unit-tested.
 
 export const DISTANCES = [7, 18, 25, 30, 50, 60, 70];
-export const FACE_IDS = ['40s', '40t', '40v', '40', '60', '80', '122'];
-/** Faces offered for a new session ('40s', the single 10–6 spot, stays valid for older sessions). */
-export const SETUP_FACES = ['40t', '40v', '40', '60', '80', '122'];
+export const FACE_IDS = ['40s', '40t', '40v', '40', '60s', '60', '80s', '80', '122'];
+/** Faces offered for a new session: every size also as its reduced 10–6 face where that exists. */
+export const SETUP_FACES = ['40t', '40v', '40s', '40', '60s', '60', '80s', '80', '122'];
 export const ARROWS_PER_END_MIN = 1;
 export const ARROWS_PER_END_MAX = 12;
 export const DEFAULT_ARROWS_PER_END = 3;
@@ -22,15 +22,16 @@ export const DISTANCE_DEFAULTS = {
   70: { face: '122' },
 };
 
-const FACE_LABELS = { '40s': '40 cm 10–6', '40t': '40 cm triple', '40v': '40 cm Vegas' };
+// '60s' / '80s': the reduced face (the centre of the 60 / 80 cm face, printed out to the 6 ring only)
+const FACE_LABELS = { '40s': '40 cm 10–6', '40t': '40 cm triple', '40v': '40 cm Vegas', '60s': '60 cm 10–6', '80s': '80 cm 10–6' };
 
 export function faceLabel(face) {
   return FACE_LABELS[face] || `${face} cm`;
 }
 
-/** Faces scored 10–6 (the indoor 40 cm spot, single or three on one sheet). */
+/** Faces scored 10–6: the indoor 40 cm spot (single or three on one sheet) and the reduced 60 / 80 cm faces. */
 export function isSpotFace(face) {
-  return face === '40s' || face === '40t' || face === '40v';
+  return face === '40s' || face === '40t' || face === '40v' || face === '60s' || face === '80s';
 }
 
 /**
@@ -58,6 +59,21 @@ export function isMultiSpot(face) {
 /** Centres of the spots on a sheet; a single face has one at the origin. */
 export function spotCentres(face) {
   return SPOT_CENTRES[face] || [[0, 0]];
+}
+
+/**
+ * The spot suggested for the arrow in slot `cursor` of an end on a triple or Vegas sheet (a hint only:
+ * any spot can be shot at). Slot n suggests spot n; when that spot is already used by another arrow
+ * of the end (or there is no spot n), the first spot not used yet; when all are used, they repeat.
+ * Null on a single face.
+ */
+export function suggestedSpot(face, arrows, cursor) {
+  if (!isMultiSpot(face)) return null;
+  const count = spotCentres(face).length;
+  const used = new Set(arrows.filter((a, i) => i !== cursor && a.spot != null).map((a) => a.spot));
+  if (cursor < count && !used.has(cursor)) return cursor;
+  const free = Array.from({ length: count }, (_, i) => i).find((i) => !used.has(i));
+  return free ?? cursor % count;
 }
 
 /**
@@ -94,18 +110,31 @@ export function isValidArrowValue(v) {
 }
 
 /**
+ * The scoring rings of a face, in its radius: the X ring's edge, and how many scoring rings of equal
+ * width (the 10 ring first) fill the radius. A 10–6 face has five (10 to 6), a full face ten.
+ */
+function ringRule(face) {
+  return isSpotFace(face) ? { x: 0.1, perRadius: 5 } : { x: 0.05, perRadius: 10 };
+}
+
+/**
+ * The edges of a face's scoring rings as fractions of its radius, the X ring first and the face's
+ * edge (1) last: ring k (k ≥ 1) scores 10 − (k − 1) inside its edge.
+ */
+export function ringEdges(face) {
+  const { x, perRadius } = ringRule(face);
+  return [x, ...Array.from({ length: perRadius }, (_, k) => (k + 1) / perRadius)];
+}
+
+/**
  * Score a tap given its position normalised to the face radius (x, y in [-1, 1], centre 0,0).
  * A tap exactly on a ring line scores the lower ring.
  */
 export function scoreFromPoint(x, y, face) {
+  const { x: xRing, perRadius } = ringRule(face);
   const d = Math.hypot(x, y);
-  if (isSpotFace(face)) {
-    if (d <= 0.1) return 'X';
-    if (d < 1) return 10 - Math.floor(round9(d * 5));
-    return 'M';
-  }
-  if (d <= 0.05) return 'X';
-  if (d < 1) return 10 - Math.floor(round9(d * 10));
+  if (d <= xRing) return 'X';
+  if (d < 1) return 10 - Math.floor(round9(d * perRadius));
   return 'M';
 }
 

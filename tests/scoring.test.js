@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { scoreFromPoint, arrowValue, keypadValues, zoneOf, DISTANCE_DEFAULTS, locateOnSheet, sheetPoint } from '../public/js/app/scoring.js';
+import { scoreFromPoint, arrowValue, keypadValues, zoneOf, DISTANCE_DEFAULTS, locateOnSheet, sheetPoint, faceLabel } from '../public/js/app/scoring.js';
 
 describe('scoreFromPoint – full face', () => {
   const f = '122';
@@ -55,6 +55,16 @@ describe('helpers', () => {
   });
   it('keypad shows only 6–10 on the spot face', () => {
     expect(keypadValues('40s')).toEqual(['X', 10, 9, 8, 7, 6, 'M']);
+    // the reduced 60 / 80 cm faces are scored the same way: 10-6, a miss outside the blue
+    for (const face of ['60s', '80s']) {
+      expect(keypadValues(face)).toEqual(['X', 10, 9, 8, 7, 6, 'M']);
+      expect(scoreFromPoint(0.05, 0, face)).toBe('X');
+      expect(scoreFromPoint(0.5, 0, face)).toBe(8);
+      expect(scoreFromPoint(0.9, 0, face)).toBe(6);
+      expect(scoreFromPoint(1.05, 0, face)).toBe('M');
+    }
+    expect(faceLabel('60s')).toBe('60 cm 10–6');
+    expect(faceLabel('80s')).toBe('80 cm 10–6');
     expect(keypadValues('122')).toHaveLength(12);
   });
   it('zones follow WA colours', () => {

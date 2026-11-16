@@ -7,7 +7,8 @@
 // - Deletion markers older than the retention period are dropped.
 // - Remote records that fail validation are skipped (counted in `skipped`).
 // - updatedAt more than CLOCK_SKEW_MS in the future (a device with a wrong clock) is clamped to now.
-// - Synced settings (the gear setup) are merged as one unit by meta.settingsUpdatedAt.
+// - Synced settings (which gear setup is active) are merged as one unit by meta.settingsUpdatedAt.
+//   Gear setups themselves are a collection like any other: the newer record wins whole.
 
 const CLOCK_SKEW_MS = 5 * 60 * 1000;
 

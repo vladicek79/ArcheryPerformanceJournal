@@ -4,3 +4,4 @@ coverage/
 *.local.*
 backups/
 *-backup-*.json
+.claude/worktrees/*

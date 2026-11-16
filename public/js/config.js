@@ -1,8 +1,10 @@
 export const APP_NAME = 'Archery Performance Journal';
 export const APP_ID = 'archery-performance-journal';
-export const SCHEMA_VERSION = 5;
+export const SCHEMA_VERSION = 7;
 export const APP_VERSION = '__APP_VERSION__';
 export const BACKUP_REMINDER_DAYS = 30;
+// deleted sessions stay in Recently deleted (History) this long before they are removed for good
+export const TRASH_DAYS = 7;
 
 // Environment, stamped by the deploy workflow: 'prod' (main) or 'test' (main-test, served under /test/).
 // Unstamped (local development) it still contains the placeholder text and counts as 'dev'.
@@ -12,6 +14,14 @@ export const APP_ENV = STAMPED_ENV.includes('APP_ENV') ? 'dev' : STAMPED_ENV;
 // Test and production share the browser origin (vladicek79.github.io), so the test build keeps
 // its data under its own key and never sees the real journal. Local dev uses the normal key.
 export const STORAGE_KEY = APP_ENV === 'test' ? 'apj-test.v1' : 'apj.v1';
+
+// ---------------------------------------------------------------- Support (optional)
+// The page where people can tip the author (Ko-fi, Buy Me a Coffee, PayPal.Me). Empty = no support card
+// in Settings. The landing page (public/welcome/index.html) has its own copy of the link.
+export const SUPPORT_URL = 'https://ko-fi.com/archeryjournal';
+// QR code of SUPPORT_URL, shown under the button so someone else can scan it. Regenerate it when the
+// link changes; empty = no QR code.
+export const SUPPORT_QR = './icons/support-qr.svg';
 
 // ---------------------------------------------------------------- Google Drive sync (optional)
 // OAuth client ID of type "Web application" from Google Cloud (public, no secret). Empty = sync hidden.

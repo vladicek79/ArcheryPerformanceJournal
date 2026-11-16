@@ -207,4 +207,34 @@ describe('without sync', () => {
     repo.remove('sessions', s.id);
     expect(repo.exportDocument().collections.sessions).toEqual([]);
   });
+
+  it('moves records to the recycle bin, restores them and purges old ones', () => {
+    const repo = make(createMemoryAdapter());
+    repo.init();
+    const a = repo.save('sessions', session());
+    const b = repo.save('sessions', session());
+    clock += 1000;
+    repo.trash('sessions', a.id);
+    expect(repo.list('sessions').map((x) => x.id)).toEqual([b.id]);
+    expect(repo.get('sessions', a.id)).toBeNull();
+    const binned = repo.listTrash('sessions');
+    expect(binned.map((x) => x.id)).toEqual([a.id]);
+    expect(binned[0].ends).toEqual(a.ends); // the data is kept
+    expect(binned[0].updatedAt > a.updatedAt).toBe(true); // so the move syncs
+
+    clock += 1000;
+    repo.restore('sessions', a.id);
+    expect(repo.get('sessions', a.id)?.trashedAt).toBeUndefined();
+    expect(repo.listTrash('sessions')).toEqual([]);
+
+    repo.trash('sessions', a.id);
+    repo.trash('sessions', b.id);
+    const WEEK = 7 * 24 * 3600 * 1000;
+    clock += WEEK - 1;
+    expect(repo.purgeTrash('sessions', WEEK)).toBe(0);
+    clock += 2;
+    expect(repo.purgeTrash('sessions', WEEK)).toBe(2);
+    expect(repo.listTrash('sessions')).toEqual([]);
+    expect(repo.list('sessions')).toEqual([]);
+  });
 });

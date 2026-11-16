@@ -1,0 +1,446 @@
+/* Landing page. Colours and type come from the app's tokens (../css/apl-tokens.css), so it follows
+   the same dark / light theme as the app. */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font: var(--type-body);
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-text-size-adjust: 100%;
+}
+
+a {
+  color: var(--accent-bright);
+}
+
+h1,
+h2 {
+  margin: 0 0 var(--space-4);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+h1 {
+  font-size: clamp(36px, 8vw, 60px);
+  font-weight: 700;
+}
+
+h2 {
+  font-size: clamp(24px, 4.5vw, 32px);
+  font-weight: 700;
+}
+
+p {
+  margin: 0 0 var(--space-5);
+  color: var(--ink-soft);
+  text-wrap: pretty;
+}
+
+.wrap {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 64px 16px;
+}
+
+.narrow {
+  max-width: 720px;
+}
+
+.band {
+  background: var(--surface-sunken);
+  border-block: 1px solid var(--border-soft);
+}
+
+.eyebrow {
+  margin: 0 0 var(--space-2);
+  color: var(--accent-bright);
+  font: var(--type-label);
+  letter-spacing: var(--type-label-tracking);
+  text-transform: uppercase;
+}
+
+.note {
+  padding: var(--space-4) var(--space-5);
+  background: var(--accent-tint);
+  border: 1px solid var(--accent-tint-border);
+  border-radius: var(--radius-md);
+  font-size: 15px;
+}
+
+/* top bar */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) 16px;
+  background: color-mix(in srgb, var(--surface-bar) 88%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  color: var(--ink);
+  font: var(--type-body-strong);
+  text-decoration: none;
+}
+
+.brand span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--tap-primary);
+  padding: 0 var(--space-6);
+  background: var(--accent);
+  color: var(--on-accent);
+  border-radius: var(--radius-lg);
+  font: var(--type-button-lg);
+  text-decoration: none;
+  transition: filter 0.15s;
+}
+
+.btn:hover {
+  filter: brightness(1.12);
+}
+
+.btn:focus-visible,
+.link:focus-visible,
+summary:focus-visible {
+  outline: 2px solid var(--accent-bright);
+  outline-offset: 3px;
+}
+
+.btn-small {
+  flex: none;
+  min-height: var(--tap-min);
+  padding: 0 var(--space-5);
+  font: var(--type-body-strong);
+}
+
+.btn-coffee {
+  background: var(--target-gold);
+  color: #14181b;
+}
+
+.link {
+  font: var(--type-body-strong);
+  text-decoration: none;
+}
+
+/* hero */
+.hero {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  align-items: center;
+  gap: 48px;
+  padding-top: 56px;
+}
+
+.lead {
+  font-size: 19px;
+  max-width: 34em;
+}
+
+.cta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-5) var(--space-6);
+  margin: var(--space-6) 0;
+}
+
+.trust {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.trust li {
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-pill);
+  color: var(--muted);
+  font: var(--type-label);
+}
+
+/* real app screens in a phone-like frame */
+.shot {
+  margin: 0;
+  justify-self: center;
+  width: 100%;
+  max-width: 280px;
+}
+
+.shot img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 6px solid #1e252a;
+  border-radius: 34px;
+  background: #0b0e10;
+  box-shadow: 0 18px 40px rgb(0 0 0 / 0.35);
+}
+
+.shot-hero {
+  max-width: 300px;
+}
+
+.shots-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 32px;
+  padding-top: 0;
+}
+
+.shots-note {
+  padding-block: 0 40px;
+  color: var(--muted);
+  font: var(--type-caption);
+  text-align: center;
+}
+
+figcaption {
+  margin-top: var(--space-3);
+  color: var(--muted);
+  font: var(--type-caption);
+  text-align: center;
+}
+
+/* pillars */
+.pillars {
+  display: grid;
+  gap: 72px;
+}
+
+.pillar {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  align-items: center;
+  gap: 48px;
+}
+
+.pillar:nth-child(even) .pillar-art {
+  order: -1;
+}
+
+.pillar-art {
+  margin: 0;
+  padding: var(--space-6);
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-xl);
+}
+
+.ticks {
+  margin: 0 0 var(--space-5);
+  padding: 0;
+  list-style: none;
+}
+
+.ticks li {
+  position: relative;
+  margin-bottom: var(--space-3);
+  padding-left: 28px;
+  color: var(--ink-soft);
+}
+
+.ticks li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  color: var(--accent-bright);
+  font-weight: 700;
+}
+
+.ticks strong,
+p strong {
+  color: var(--ink);
+}
+
+/* timer */
+.timer svg {
+  display: block;
+  width: 100%;
+  max-width: 260px;
+  height: auto;
+  margin: 0 auto;
+}
+
+.ring-bg,
+.ring {
+  fill: none;
+  stroke-width: 12;
+}
+
+.ring-bg {
+  stroke: var(--border-soft);
+}
+
+.ring {
+  stroke: var(--accent-bright);
+  stroke-linecap: round;
+  transform: rotate(-90deg);
+  transform-origin: 100px 100px;
+}
+
+.timer-phase {
+  fill: var(--accent-bright);
+  font: 700 14px var(--font-sans);
+  letter-spacing: 0.12em;
+  text-anchor: middle;
+}
+
+.timer-sec {
+  fill: var(--ink);
+  font: 700 40px var(--font-sans);
+  text-anchor: middle;
+}
+
+.timer-rep {
+  fill: var(--muted);
+  font: 500 11px var(--font-sans);
+  text-anchor: middle;
+}
+
+/* badges */
+.badges {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.badges span {
+  padding: var(--space-4) var(--space-5);
+  background: var(--accent-tint);
+  border: 1px solid var(--accent-tint-border);
+  border-radius: var(--radius-md);
+  color: var(--ink);
+  font: var(--type-body-strong);
+  text-align: center;
+}
+
+/* install */
+.steps {
+  margin: 0 0 var(--space-6);
+  padding-left: 1.4em;
+  color: var(--ink-soft);
+}
+
+.steps li {
+  margin-bottom: var(--space-3);
+}
+
+/* FAQ */
+.faq details {
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.faq summary {
+  padding: var(--space-5) 0;
+  color: var(--ink);
+  font: var(--type-body-strong);
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.faq details p {
+  margin-top: 0;
+}
+
+/* footer */
+.footer {
+  padding-block: 40px;
+  color: var(--muted);
+  font: var(--type-caption);
+  text-align: center;
+}
+
+.footer p {
+  margin: 0 0 var(--space-2);
+  color: var(--muted);
+}
+
+/* phone width */
+@media (max-width: 760px) {
+  .wrap {
+    padding: 48px 16px;
+  }
+
+  .hero,
+  .pillar {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+
+  .hero {
+    padding-top: 32px;
+  }
+
+  .pillar:nth-child(even) .pillar-art {
+    order: 0;
+  }
+
+  .shot,
+  .shot-hero {
+    max-width: 260px;
+  }
+
+  /* the screens row swipes sideways on a phone; the page itself never scrolls sideways */
+  .shots-row {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: 70%;
+    gap: 16px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    padding-bottom: 8px;
+  }
+
+  .shots-row .shot {
+    scroll-snap-align: center;
+  }
+
+  .pillars {
+    gap: 56px;
+  }
+
+  .brand span {
+    font-size: 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}

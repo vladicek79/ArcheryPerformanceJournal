@@ -1,7 +1,7 @@
 // In-app confirmation dialog, used instead of the browser's confirm() box.
 // A native <dialog> shown with showModal(): the page behind is inert, focus stays inside, Escape
 // cancels. Resolves true when confirmed, false when cancelled (button, Escape or a backdrop tap).
-import { h } from '../../core/dom.js';
+import * as APL from '../../ui/apl/index.js';
 import { icons } from '../icons.js';
 
 /**
@@ -10,32 +10,31 @@ import { icons } from '../icons.js';
  * @param {string} [o.message]
  * @param {string} [o.confirmLabel]  text of the confirming button
  * @param {string} [o.cancelLabel]
- * @param {boolean} [o.danger]       destructive action: red button, and Cancel gets the focus
+ * @param {boolean} [o.danger]       destructive action: danger button, and Cancel gets the focus
  * @param {Node} [o.body]           extra content, e.g. form fields (the caller reads them after a true);
  *                                   Enter in a single-line field confirms, the first field gets the focus
  * @param {string} [o.icon]          icon name for the badge (default: trash when danger, help otherwise)
+ * @param {boolean} [o.bare]         only the body and the two buttons: no badge, title or message on
+ *                                   screen (the title is still the dialog's name for screen readers)
  * @returns {Promise<boolean>}
  */
-export function confirmDialog({ title, message = '', confirmLabel = 'OK', cancelLabel = 'Cancel', danger = false, body = null, icon = null }) {
+export function confirmDialog({ title, message = '', confirmLabel = 'OK', cancelLabel = 'Cancel', danger = false, body = null, icon = null, bare = false }) {
   return new Promise((resolve) => {
     const returnFocus = document.activeElement;
     let result = false;
 
-    const cancelBtn = h('button', { type: 'button', class: 'btn btn-outline', onClick: () => close(false) }, cancelLabel);
-    const okBtn = h('button', { type: 'button', class: ['btn', danger ? 'btn-danger' : 'btn-primary'], onClick: () => close(true) }, confirmLabel);
-    const dialog = h(
-      'dialog',
-      { class: ['confirm', danger && 'is-danger'], 'aria-labelledby': 'confirm-title', 'aria-describedby': message ? 'confirm-msg' : null },
-      h(
-        'div',
-        { class: 'confirm-body' },
-        h('div', { class: 'confirm-icon', 'aria-hidden': 'true' }, icons[icon || (danger ? 'trash' : 'help')]()),
-        h('h2', { class: 'confirm-title', id: 'confirm-title' }, title),
-        message ? h('p', { class: 'confirm-msg', id: 'confirm-msg' }, message) : null,
-      ),
-      body ? h('div', { class: 'confirm-fields' }, body) : null,
-      h('div', { class: 'confirm-actions' }, cancelBtn, okBtn),
-    );
+    const cancelBtn = APL.Button({ children: cancelLabel, variant: 'secondary', onClick: () => close(false) });
+    const okBtn = APL.Button({ children: confirmLabel, variant: danger ? 'danger' : 'primary', onClick: () => close(true) });
+    const dialog = APL.Dialog({
+      title,
+      message,
+      icon: bare ? null : icons[icon || (danger ? 'trash' : 'help')](),
+      tone: danger ? 'danger' : 'neutral',
+      body,
+      bare,
+      idPrefix: 'confirm',
+      actions: [cancelBtn, okBtn],
+    });
 
     function close(ok) {
       result = ok;

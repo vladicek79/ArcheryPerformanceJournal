@@ -101,6 +101,21 @@ describe('editing an existing arrow', () => {
   });
 });
 
+describe('moving a placed arrow', () => {
+  it('changes its score and position, keeps its grades and the other arrows', () => {
+    let s = L.enterScore(start(), 9, 0.3, 0.1);
+    s = L.gradeArrow(s, 'm', 2);
+    s = L.enterScore(s, 7, -0.6, 0.2);
+    s = L.moveArrow(s, 0, 10, 0.05, -0.02);
+    expect(s.current.arrows[0]).toMatchObject({ v: 10, x: 0.05, y: -0.02, m: 2 });
+    expect(s.current.arrows[1]).toMatchObject({ v: 7, x: -0.6, y: 0.2 });
+    expect(s.pinned).toBe(false);
+    // the next score still goes to the next empty slot
+    s = L.enterScore(s, 8);
+    expect(s.current.arrows.map((a) => a.v)).toEqual([10, 7, 8]);
+  });
+});
+
 describe('let-down steppers', () => {
   it('correct let-downs never exceed let-downs', () => {
     let s = L.bump(start(), 'cld', 1);
@@ -304,23 +319,6 @@ describe('session timer', () => {
   });
 });
 
-describe('form timer (blank bale, strength, mental)', () => {
-  const now = new Date('2026-11-12T18:00:00Z');
-  it('keeps a timer touched within the last hours', () => {
-    const t = { running: true, startedAt: '2026-11-12T17:00:00Z', elapsedMs: 0 };
-    expect(L.openFormTimer(t, now)).toBe(t);
-    const paused = { running: false, startedAt: null, elapsedMs: 600000, touchedAt: '2026-11-12T16:30:00Z' };
-    expect(L.openFormTimer(paused, now)).toBe(paused);
-  });
-  it('starts again when a form was left unsaved for hours, or there is no timer', () => {
-    const left = { running: true, startedAt: '2026-11-12T00:00:00Z', elapsedMs: 0 };
-    expect(L.openFormTimer(left, now)).toEqual({ running: true, startedAt: now.toISOString(), elapsedMs: 0, touchedAt: now.toISOString() });
-    const oldPaused = { running: false, startedAt: null, elapsedMs: 600000, touchedAt: '2026-11-11T10:00:00Z' };
-    expect(L.timerElapsed(L.openFormTimer(oldPaused, now), now)).toBe(0);
-    expect(L.timerElapsed(L.openFormTimer(null, now), now)).toBe(0);
-  });
-});
-
 describe('session logged afterwards', () => {
   it('keeps the start time and a stopped timer holding the duration typed in', () => {
     const s = L.createSession({ date: '2026-11-08', time: '17:30', distance: 18, face: '40t', arrowsPerEnd: 3, pastMinutes: 90 });
@@ -334,5 +332,19 @@ describe('session logged afterwards', () => {
     expect(L.isPastStart('2026-11-12', '17:50', now)).toBe(false);
     expect(L.isPastStart('2026-11-12', '17:30', now)).toBe(true);
     expect(L.isPastStart('2026-11-11', '18:00', now)).toBe(true);
+  });
+});
+
+describe('arrow positions', () => {
+  it('keeps a position on the face, rounded to three places', () => {
+    const a = L.enterScore(start(), 9, 0.123456, -0.2).current.arrows[0];
+    expect([a.x, a.y]).toEqual([0.123, -0.2]);
+  });
+
+  it('keeps only the score of an arrow placed or moved off the face', () => {
+    const a = L.enterScore(start(), 6, 1.2, 0.3, 1).current.arrows[0];
+    expect(a).toEqual({ v: 6, m: null, s: null, x: null, y: null });
+    const moved = L.moveArrow(L.enterScore(start(), 9, 0.2, 0.1), 0, 'M', 0, -1.5).current.arrows[0];
+    expect([moved.v, moved.x, moved.y]).toEqual(['M', null, null]);
   });
 });

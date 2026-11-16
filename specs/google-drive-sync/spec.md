@@ -18,22 +18,22 @@ An optional **Continue with Google** sign-in in Settings. Once signed in on a de
 4. As an archer, I want the journal file to be invisible in my normal Drive file list, so that it does not clutter my Drive.
 5. As an archer, I want my data synced automatically when I open the app, so that I see the latest sessions from my other devices.
 6. As an archer, I want my data synced automatically when I finish a session, so that it is safe in Drive right after training.
-7. As an archer, I want other changes (gear, sight marks, competitions, edits to past sessions) synced shortly after I make them, so that I don't have to remember to sync.
+7. As an archer, I want other changes (gear and its sight marks, competitions, edits to past sessions) synced shortly after I make them, so that I don't have to remember to sync.
 8. As an archer, I want a **Sync now** button, so that I can force a sync before switching devices.
 9. As an archer, I want to keep logging arrows with no signal at the range, so that sync never blocks scoring or grading.
 10. As an archer, I want changes made offline to sync automatically once I am back online, so that nothing is lost.
 11. As an archer, I want to see when the last successful sync happened and whether it is in progress or failed, so that I know whether my devices are up to date.
 12. As an archer, I want a clear message when a sync fails (offline, sign-in expired, Drive error), so that I know what to do.
 13. As an archer, I want sessions I logged on the phone to appear on my tablet after both have synced, so that I can review them on a bigger screen.
-14. As an archer, I want gear setups, gear snapshots, sight marks and competitions to sync too, so that every device has the same equipment and sight data.
+14. As an archer, I want my gear setups (each with its own sight marks) and competitions to sync too, so that every device has the same equipment and sight data.
 15. As an archer, I want a session I delete on one device to stay deleted on the others, so that deleted data does not come back.
-16. As an archer, I want a gear snapshot, sight mark or competition I delete on one device to stay deleted on the others, so that cleanup sticks.
+16. As an archer, I want a gear setup or competition I delete on one device to stay deleted on the others, so that cleanup sticks.
 17. As an archer, I want edits to the same record on two devices to resolve to the most recent edit, so that sync never fails because of a conflict.
 18. As an archer, I want edits to different records on two devices to both survive, so that working on two devices loses nothing.
 19. As an archer, I want my first sign-in on a device that already has data to merge that data with what is in Drive, so that neither side is overwritten.
 20. As an archer, I want my first sign-in on a new, empty device to download everything from Drive, so that setting up a second device is one step.
 21. As an archer, I want the session I am currently logging (the active session) to sync like any other record, so that I can continue it on another device if needed.
-22. As an archer, I want app settings that are personal to a device (such as the accent colour) to stay per device, while the gear setup syncs, so that each device can look the way I like.
+22. As an archer, I want app settings that are personal to a device (such as the accent colour) to stay per device, while which gear setup is active syncs, so that each device can look the way I like.
 23. As an archer, I want to sign out from Settings, so that I can stop syncing on a shared or old device.
 24. As an archer, I want signing out to keep the data on the device, so that I don't lose anything by signing out.
 25. As an archer, I want to stay signed in between app launches, so that I don't have to sign in every time I open the app.
@@ -75,7 +75,7 @@ Only one cycle runs at a time; requests that arrive during a cycle are coalesced
 **Merge rules** (extends the existing merge-import logic in the repository):
 - Records are matched by `id` per collection; the record with the newer `updatedAt` wins as a whole (no field-level merge).
 - **Deletions become tombstones.** `remove()` no longer drops a record outright: it keeps `{ id, deletedAt, updatedAt }` (a tombstone). A tombstone beats any version of the record with an older `updatedAt`. `list()`/`get()` hide tombstones from views. Tombstones older than a retention period (for example 180 days) are purged during sync.
-- Synced settings: only the gear setup (`gear`, `activeSnapshotId`), `lastSetup` and `sightsSeeded`, merged as one unit by a `settingsUpdatedAt` timestamp. Device-local settings (accent colour, sign-in state) never leave the device.
+- Synced settings: only `activeSetupId` (schema v7), merged by a `settingsUpdatedAt` timestamp. Gear setups are the `setups` collection and merge record by record like any other (the newer setup wins whole, its sight marks `fields.sights` and tuning history included). A sight mark is therefore not a record of its own. When `activeSetupId` names a setup deleted on another device, the most recently changed setup counts as active. Device-local settings (accent colour, sign-in state) never leave the device.
 - Validation runs on every merged record exactly as on import; an invalid remote record is skipped and reported, never written locally.
 
 **Schema change.** `SCHEMA_VERSION` 1 → 2 with a migration that adds `settingsUpdatedAt` and an empty tombstone convention; existing records are unchanged. Old backups stay importable through the migration chain.
@@ -89,7 +89,7 @@ Only one cycle runs at a time; requests that arrive during a cycle are coalesced
 ## Testing Decisions
 
 - **One test seam: the sync service**, exercised with Vitest against an in-memory fake Drive store and the existing in-memory storage adapter + repository (two "devices" = two repositories sharing one fake Drive). Tests assert only observable outcomes: what each device's repository lists after `sync()`, what the fake Drive holds, and the returned status. They never inspect internal steps.
-- Scenarios to cover: first sync with empty Drive (upload); first sync on an empty device (download); both sides have different records (union); same record edited on both (newer `updatedAt` wins); deletion on one device propagates and is not resurrected; a tombstone older than an edit loses; concurrent write conflict (fake store changes version between read and write) → retry succeeds; remote document with a newer schema → `newer-version`, local data untouched; remote document with an older schema → migrated; invalid remote record skipped; device-local settings not synced, gear settings synced; offline/auth errors from the store → reported, local data untouched; tombstone purge after retention.
+- Scenarios to cover: first sync with empty Drive (upload); first sync on an empty device (download); both sides have different records (union); same record edited on both (newer `updatedAt` wins); deletion on one device propagates and is not resurrected; a tombstone older than an edit loses; concurrent write conflict (fake store changes version between read and write) → retry succeeds; remote document with a newer schema → `newer-version`, local data untouched; remote document with an older schema → migrated; invalid remote record skipped; device-local settings not synced, the active setup synced; two devices editing different setups (both kept) and the same setup (newer wins); the active setup deleted on the other device (fallback); offline/auth errors from the store → reported, local data untouched; tombstone purge after retention.
 - Repository changes (tombstones in `remove`, hidden from `list`/`get`, merge honouring tombstones) are covered through the same seam plus updates to the existing repository tests where their expectations change.
 - Migration 1 → 2 gets a unit test next to the existing migration tests.
 - **Prior art:** the merge-import, replace/undo and migration tests in the existing repository and backup test files use the same in-memory adapter and fixed clock; the new tests follow that style.
@@ -115,8 +115,9 @@ Only one cycle runs at a time; requests that arrive during a cycle are coalesced
 
 ## Decisions made during implementation
 
-- **Synced settings are only the gear setup** (`gear`, `activeSnapshotId`). `lastSetup` and `sightsSeeded` stay per device: they change on their own (starting a session, first launch) and would make a fresh device's settings look newer than the real gear setup.
-- **Default sight marks get fixed ids** (`seed-18`, …) so the same default row on two devices is one record; after a pull, untouched default rows whose distance another row already covers are removed.
+- **Synced settings are only the active setup** (`activeSetupId`, schema v7; before it the working copy `gear`, `activeSnapshotId` and `loadedSnapshotId`). `lastSetup` stays per device: it changes on its own (starting a session) and would make a fresh device's settings look newer.
+- **Gear setups (schema v7).** `gearSnapshots` became `setups` and the working copy went. A v6 document, local or pulled from Drive, turns a working copy that differs from its loaded snapshot into "My setup" with the fixed id `migrated-v7` and the time of `settingsUpdatedAt`, so devices migrating the same synced gear produce the same record and the merge keeps one.
+- **Sight marks belong to a gear setup (schema v6).** They were a `sightMarks` collection with seeded default rows (fixed ids `seed-18`, …, deduplicated after a pull). Since v6 they live in the setup as `sights`, and the default distances are only shown, never stored, until one is typed in, so a fresh device writes nothing and no seeding or deduplication is needed. A v5 document pulled from Drive is migrated like local data: its marks move into the current setup and a copy goes to every saved setup.
 - **Token storage:** the access token is kept in local storage with its expiry (not session storage), so an installed PWA reopened within the hour does not redirect again.
 - **Silent renewal happens only at app start**; an expiry during use shows *Sign-in expired* with a *Reconnect Google* button instead of redirecting mid-logging.
 - **Account e-mail** comes from Drive's `about` endpoint, so no `openid`/`email` scopes are requested — only `drive.appdata`.

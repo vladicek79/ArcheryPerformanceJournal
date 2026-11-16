@@ -8,6 +8,38 @@ const PAD = { l: 34, r: 12, t: 12, b: 26 };
 /** The first and last axis labels are anchored inward so they never run off the chart. */
 const edgeAnchor = (i, n) => (n > 1 && i === 0 ? 'start' : n > 1 && i === n - 1 ? 'end' : 'middle');
 
+/** Rough width of an axis label in px (11–12px Inter: about 6.6px a character). */
+const LABEL_CHAR_PX = 6.6;
+const LABEL_GAP_PX = 6;
+
+/**
+ * Which points get a date label on the x axis: every `every`-th one and the last one, but never two
+ * that would overlap. A label is `labels[i]` drawn at `xAt(i)` with the anchor of edgeAnchor. When the
+ * last label would run into the one before it, that earlier one is dropped: the latest date matters most.
+ */
+export function axisLabelIndexes(labels, xAt, every) {
+  const n = labels.length;
+  const extent = (i) => {
+    const w = String(labels[i]).length * LABEL_CHAR_PX;
+    const x = xAt(i);
+    const a = edgeAnchor(i, n);
+    return a === 'start' ? [x, x + w] : a === 'end' ? [x - w, x] : [x - w / 2, x + w / 2];
+  };
+  const kept = [];
+  const clashes = (i) => kept.length > 0 && extent(kept[kept.length - 1])[1] + LABEL_GAP_PX > extent(i)[0];
+  for (let i = 0; i < n; i++) {
+    if (i % every !== 0 && i !== n - 1) continue;
+    if (i !== n - 1) {
+      if (!clashes(i)) kept.push(i);
+      continue;
+    }
+    // the last date always shows: drop earlier labels until it has room
+    while (clashes(i)) kept.pop();
+    kept.push(i);
+  }
+  return new Set(kept);
+}
+
 /** Legend row (always shown for two or more series). */
 export function legend(series) {
   if (series.length < 2) return null;
@@ -78,10 +110,15 @@ export function lineChart({ points, series, yDomain, yTicks, invert = false, hei
         s('text', { x: PAD.l - 6, y: yAt(v) + 4, 'text-anchor': 'end', class: 'viz-axis' }, String(v)),
       ),
     );
-    // at most ~6 date labels, spread evenly
+    // at most ~6 date labels, spread evenly, none overlapping
     const every = Math.max(1, Math.ceil(points.length / Math.max(2, Math.floor(iw / 70))));
+    const labelled = axisLabelIndexes(
+      points.map((p) => p.label),
+      xAt,
+      every,
+    );
     const xLabels = points.map((p, i) =>
-      i % every === 0 || i === points.length - 1
+      labelled.has(i)
         ? s('text', { x: xAt(i), y: H - 8, 'text-anchor': edgeAnchor(i, points.length), class: 'viz-axis' }, p.label)
         : null,
     );
@@ -201,6 +238,11 @@ export function stackedBars({ bars, series, height = 220, yLabel = '' }) {
     const slot = iw / Math.max(1, bars.length);
     const bw = Math.max(3, Math.min(28, slot * 0.6));
     const every = Math.max(1, Math.ceil(bars.length / Math.max(2, Math.floor(iw / 70))));
+    const labelled = axisLabelIndexes(
+      bars.map((b) => b.label),
+      (i) => PAD.l + i * slot + slot / 2,
+      every,
+    );
 
     const grid = ticks.map((v) =>
       s(
@@ -231,8 +273,7 @@ export function stackedBars({ bars, series, height = 220, yLabel = '' }) {
         showTip(tip, wrap, ev.clientX - r.left, ev.clientY - r.top, b.tip);
       });
       hit.addEventListener('pointerleave', () => (tip.hidden = true));
-      const label =
-        i % every === 0 || i === bars.length - 1
+      const label = labelled.has(i)
           ? s('text', { x: x + bw / 2, y: H - 8, 'text-anchor': edgeAnchor(i, bars.length), class: 'viz-axis' }, b.label)
           : null;
       return s('g', null, segs, label, hit);

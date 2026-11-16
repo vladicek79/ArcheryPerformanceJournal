@@ -1,0 +1,23 @@
+{
+  "about": "Tokens this app adds to APL (approved 2026-11-15). Not part of the APL design system: errors and destructive text, and data colours that are drawn but never mark UI state. Like the design system's tokens, a value is one colour for both themes or a {dark, light} pair.",
+  "color": [
+    {"name": "danger", "value": {"dark": "#ff8a80", "light": "#c62828"}, "usage": "Error text, destructive text buttons (dark 7.6:1, light 5.6:1 on surface) and the fill of a destructive dialog's confirm button (with on-danger text). Never next to a target face as a score colour."},
+    {"name": "on-danger", "value": {"dark": "#0b0e10", "light": "#ffffff"}, "usage": "Text on a danger fill (the confirm button of a destructive dialog)."},
+    {"name": "score-miss", "value": "#d7d9db", "usage": "Data: a miss (M) on score keys and chips, beside the target-* ring colours."},
+    {"name": "data-edge", "value": {"dark": "transparent", "light": "#808a91"}, "usage": "Outline of a score or grade key whose data fill is light (target-gold, target-white, score-miss, grade-2…4). Dark: none (the fill shows); light: the border colour, so the key stays visible on a white surface. The fill itself never changes."},
+    {"name": "grade-1", "value": "#0b6e4f", "usage": "Data: grade 1 (best) on M / S keys and badges."},
+    {"name": "grade-2", "value": "#7cc29a", "usage": "Data: grade 2."},
+    {"name": "grade-3", "value": "#f2d65c", "usage": "Data: grade 3."},
+    {"name": "grade-4", "value": "#f2994a", "usage": "Data: grade 4."},
+    {"name": "grade-5", "value": "#b3261e", "usage": "Data: grade 5 (worst). Not an error colour."},
+    {"name": "on-grade-light", "value": "#ffffff", "usage": "Text on grade-1 and grade-5."},
+    {"name": "on-grade-dark", "value": "#14181c", "usage": "Text on grade-2, grade-3 and grade-4."},
+    {"name": "mark", "value": "#e5007e", "usage": "Data: an arrow's place on the face, and the arrow being moved or picked on the running session."},
+    {"name": "series-1", "value": "#3987e5", "usage": "Data: chart series 1 (Insights: training sessions). Validated as a categorical set on surface (3:1 or more in both themes)."},
+    {"name": "series-2", "value": "#d95926", "usage": "Data: chart series 2 (Insights: competition sessions). Validated as a categorical set on surface."},
+    {"name": "series-3", "value": "#199e70", "usage": "Data: chart series 3 (Insights: SPT sessions). Validated as a categorical set on surface."},
+    {"name": "series-4", "value": "#c98500", "usage": "Data: chart series 4 (Insights: mental sessions). Validated as a categorical set on surface."},
+    {"name": "series-5", "value": "#d55181", "usage": "Data: chart series 5 (Insights: blank bale sessions). Validated as a categorical set on surface."},
+    {"name": "series-6", "value": "#008300", "usage": "Data: chart series 6 (Insights: manual sessions). Validated as a categorical set on surface."}
+  ]
+}

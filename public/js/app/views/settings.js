@@ -1,33 +1,41 @@
-// Settings: logging preferences, backup / restore and storage diagnostics (ARCHITECTURE §6.6, §8).
+// Settings: theme, sync, backup / restore and storage diagnostics (ARCHITECTURE §6.6, §8), drawn with the
+// APL components. The page has no bottom bar, so no primary button: every action is a secondary one.
 import { h } from '../../core/dom.js';
+import * as APL from '../../ui/apl/index.js';
 import { confirmDialog } from './confirm.js';
-import { APP_VERSION } from '../../config.js';
+import { APP_VERSION, SUPPORT_URL, SUPPORT_QR } from '../../config.js';
 import { exportBackup, parseBackup } from '../../backup/backup.js';
-import { storageInfo } from '../../pwa/updates.js';
-import { ACCENTS, INK_ACCENT } from '../collections.js';
+import { checkForUpdate, storageInfo } from '../../pwa/updates.js';
 import { card } from './common.js';
-import { icons } from '../icons.js';
 
-const COLLECTION_LABELS = { sessions: 'Sessions', gearSnapshots: 'Gear snapshots', sightMarks: 'Sight marks', competitions: 'Competitions' };
+// the APL themes; 'system' follows the device (this device only, not synced)
 const THEMES = [
-  ['system', 'System', icons.device],
-  ['light', 'Light', icons.sun],
-  ['dark', 'Dark', icons.moon],
+  { value: 'system', label: 'System' },
+  { value: 'light', label: 'Light' },
+  { value: 'dark', label: 'Dark' },
 ];
-const ACCENT_NAMES = { '#0B6E4F': 'Green', '#14181C': 'Ink', '#1D4ED8': 'Blue', '#B45309': 'Amber' };
+const COLLECTION_LABELS = {
+  sessions: 'Sessions',
+  setups: 'Gear setups',
+  competitions: 'Competitions',
+};
+
+/** A card holding one APL section. */
+const sectionCard = (id, label, children) =>
+  card({ class: 'apl-card' }, APL.Section({ label, id, children }));
+const caption = (text) => h('p', { class: 'apl-cap13' }, text);
 
 export function renderSettings(ctx) {
-  const settings = ctx.repo.getSettings();
   const meta = ctx.repo.getMeta();
   const pending = ctx.ui.get().importPreview;
 
-  const storageLine = h('p', { class: 'muted small' }, 'Checking storage…');
+  const storageLine = caption('Checking storage…');
   storageInfo().then((i) => {
     const kb = (n) => (n == null ? '?' : `${Math.round(n / 1024)} KB`);
     storageLine.textContent = `Persistent storage: ${i.persisted == null ? 'unknown' : i.persisted ? 'granted' : 'not granted'} · Used ${kb(i.usage)}${i.quota ? ` of ${Math.round(i.quota / 1048576)} MB` : ''}`;
   });
 
-  const status = h('p', { class: 'small', role: 'status' });
+  const status = h('p', { class: 'apl-cap13 error', role: 'status' });
 
   const doExport = async () => {
     try {
@@ -55,7 +63,8 @@ export function renderSettings(ctx) {
       mode === 'replace' &&
       !(await confirmDialog({
         title: 'Replace all data?',
-        message: 'All data on this device is replaced with the backup. A safety copy is kept so you can undo.',
+        message:
+          'All data on this device is replaced with the backup. A safety copy is kept so you can undo.',
         confirmLabel: 'Replace',
         danger: true,
       }))
@@ -70,128 +79,194 @@ export function renderSettings(ctx) {
     }
   };
 
-  const fileInput = h('input', { type: 'file', accept: 'application/json,.json', class: 'sr-only', id: 'import-file', onChange: onFile });
+  const undoImport = async () => {
+    const ok = await confirmDialog({
+      title: 'Undo the last import?',
+      message: 'The data is restored as it was before the last Replace import.',
+      confirmLabel: 'Restore',
+    });
+    if (!ok) return;
+    ctx.repo.undoImport();
+    ctx.toast('Last import undone.');
+  };
+
+  const checkUpdate = async (e) => {
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    btn.textContent = 'Checking…';
+    const result = await checkForUpdate().catch(() => 'offline');
+    if (result === 'updating') {
+      // the page reloads by itself as soon as the new version has taken over
+      btn.textContent = 'New version found. Reloading…';
+      return;
+    }
+    btn.disabled = false;
+    btn.textContent = 'Check for new version';
+    ctx.toast(
+      result === 'current'
+        ? 'You have the latest version.'
+        : result === 'offline'
+          ? 'Could not check for a new version. Are you online?'
+          : 'Updates are not available in this browser.',
+    );
+  };
+
+  const fileInput = h('input', {
+    type: 'file',
+    accept: 'application/json,.json',
+    class: 'sr-only',
+    id: 'import-file',
+    onChange: onFile,
+  });
+
+  const importPreview = pending
+    ? h(
+        'div',
+        { class: 'import-preview', role: 'region', 'aria-label': 'Import preview' },
+        h('span', { class: 'apl-t' }, pending.fileName),
+        h(
+          'ul',
+          { class: 'plain-list apl-cap13' },
+          Object.entries(pending.summary.counts).map(([k, n]) =>
+            h('li', null, `${COLLECTION_LABELS[k] || k}: ${n}`),
+          ),
+          h(
+            'li',
+            null,
+            `Newest record: ${pending.summary.newest ? new Date(pending.summary.newest).toLocaleString('en-GB') : '—'}`,
+          ),
+        ),
+        caption(
+          'Merge keeps records from both sides (newer edit wins). Replace overwrites everything on this device.',
+        ),
+        h(
+          'div',
+          { class: 'apl-grid-2' },
+          APL.Button({
+            children: 'Merge',
+            variant: 'secondary',
+            onClick: () => applyImport('merge'),
+            fk: 'import-merge',
+          }),
+          APL.Button({
+            children: 'Replace',
+            variant: 'secondary',
+            onClick: () => applyImport('replace'),
+            fk: 'import-replace',
+          }),
+        ),
+        h(
+          'button',
+          { type: 'button', class: 'btn btn-text', onClick: () => ctx.ui.set({ importPreview: null }) },
+          'Cancel',
+        ),
+      )
+    : null;
 
   return {
     content: h(
       'div',
-      { class: 'stack' },
-      h('h1', { class: 'page-title' }, 'Settings'),
-      card(
-        { 'aria-labelledby': 'set-log' },
-        h('h2', { class: 'card-title', id: 'set-log' }, 'Appearance'),
-        h('div', { class: 'field-label', id: 'lbl-theme' }, 'Theme'),
-        h(
-          'div',
-          { class: 'theme-switch', role: 'group', 'aria-labelledby': 'lbl-theme' },
-          THEMES.map(([id, label, icon]) =>
+      { class: 'apl-screen' },
+      APL.ScreenHeader({ title: 'Settings' }),
+      h(
+        'div',
+        { class: 'apl-screen-body history-body' },
+        sectionCard('set-theme', 'Appearance', [
+          APL.SegmentedControl({
+            label: 'Theme',
+            options: THEMES,
+            value: ctx.repo.getSettings().theme || 'system',
+            onChange: (theme) => ctx.saveSettings({ theme }) && ctx.rerender(),
+            fk: 'theme',
+          }),
+          caption('Light reads better outdoors in daylight. System follows the setting of this device.'),
+        ]),
+        syncCard(ctx),
+        supportCard(),
+        sectionCard('set-backup', 'Backup', [
+          caption(
+            ctx.sync?.signedIn()
+              ? 'Your journal is synced to your Google Drive. A backup file is an extra copy you keep yourself.'
+              : 'All data stays on this device. Export a backup file regularly and keep it somewhere private (Drive, e-mail to yourself).',
+          ),
+          h(
+            'p',
+            { class: 'apl-cap13' },
+            'Last backup: ',
             h(
-              'button',
-              {
-                type: 'button',
-                class: 'theme-opt',
-                'aria-pressed': String((settings.theme || 'system') === id),
-                dataset: { fk: `theme-${id}` },
-                onClick: () => {
-                  // a short cross-fade between the themes
-                  document.documentElement.classList.add('theme-switching');
-                  setTimeout(() => document.documentElement.classList.remove('theme-switching'), 250);
-                  if (ctx.saveSettings({ theme: id })) ctx.rerender();
-                },
-              },
-              icon(),
-              h('span', null, label),
+              'strong',
+              { class: 'apl-ink' },
+              meta.lastBackupAt ? new Date(meta.lastBackupAt).toLocaleString('en-GB') : 'never',
             ),
           ),
-        ),
-        h('div', { class: 'field-label', id: 'lbl-accent' }, 'Accent colour'),
-        h(
-          'div',
-          { class: 'swatches', role: 'group', 'aria-labelledby': 'lbl-accent' },
-          ACCENTS.map((c) =>
-            h('button', {
-              type: 'button',
-              class: 'swatch',
-              // Ink is shown as it looks in the current theme (light in dark mode)
-              style: { '--swatch': c === INK_ACCENT ? 'var(--ink)' : c },
-              'aria-label': ACCENT_NAMES[c] || c,
-              'aria-pressed': String(settings.accent === c),
-              dataset: { fk: `accent-${c}` },
-              onClick: () => ctx.saveSettings({ accent: c }) && ctx.rerender(),
+          h(
+            'div',
+            { class: 'apl-grid-2' },
+            APL.Button({ children: 'Export backup', variant: 'secondary', onClick: doExport, fk: 'export' }),
+            APL.Button({
+              children: 'Import…',
+              variant: 'secondary',
+              onClick: () => fileInput.click(),
+              fk: 'import',
             }),
           ),
-        ),
-      ),
-      syncCard(ctx),
-      card(
-        { 'aria-labelledby': 'set-backup' },
-        h('h2', { class: 'card-title', id: 'set-backup' }, 'Backup'),
-        h(
-          'p',
-          { class: 'muted small' },
-          ctx.sync?.signedIn()
-            ? 'Your journal is synced to your Google Drive. A backup file is an extra copy you keep yourself.'
-            : 'All data stays on this device. Export a backup file regularly and keep it somewhere private (Drive, e-mail to yourself).',
-        ),
-        h('p', { class: 'small' }, 'Last backup: ', h('strong', null, meta.lastBackupAt ? new Date(meta.lastBackupAt).toLocaleString('en-GB') : 'never')),
-        h(
-          'div',
-          { class: 'row' },
-          h('button', { type: 'button', class: 'btn btn-primary grow-1', onClick: doExport }, 'Export backup'),
-          h('button', { type: 'button', class: 'btn btn-outline grow-1', onClick: () => fileInput.click() }, 'Import…'),
           fileInput,
-        ),
-        pending
-          ? h(
-              'div',
-              { class: 'import-preview', role: 'region', 'aria-label': 'Import preview' },
-              h('div', { class: 'strong' }, pending.fileName),
-              h(
-                'ul',
-                { class: 'plain-list small' },
-                Object.entries(pending.summary.counts).map(([k, n]) => h('li', null, `${COLLECTION_LABELS[k] || k}: ${n}`)),
-                h('li', { class: 'muted' }, `Newest record: ${pending.summary.newest ? new Date(pending.summary.newest).toLocaleString('en-GB') : '—'}`),
-              ),
-              h('p', { class: 'muted small' }, 'Merge keeps records from both sides (newer edit wins). Replace overwrites everything on this device.'),
-              h(
-                'div',
-                { class: 'row' },
-                h('button', { type: 'button', class: 'btn btn-primary grow-1', onClick: () => applyImport('merge') }, 'Merge'),
-                h('button', { type: 'button', class: 'btn btn-outline grow-1', onClick: () => applyImport('replace') }, 'Replace'),
-                h('button', { type: 'button', class: 'btn btn-outline-thin', onClick: () => ctx.ui.set({ importPreview: null }) }, 'Cancel'),
-              ),
-            )
-          : null,
-        ctx.repo.hasUndoImport()
-          ? h(
-              'button',
-              {
-                type: 'button',
-                class: 'btn btn-text',
-                onClick: async () => {
-                  const ok = await confirmDialog({
-                    title: 'Undo the last import?',
-                    message: 'The data is restored as it was before the last Replace import.',
-                    confirmLabel: 'Restore',
-                  });
-                  if (!ok) return;
-                  ctx.repo.undoImport();
-                  ctx.toast('Last import undone.');
-                },
-              },
-              'Undo last import',
-            )
-          : null,
-        status,
-      ),
-      card(
-        { 'aria-labelledby': 'set-about' },
-        h('h2', { class: 'card-title', id: 'set-about' }, 'Storage & app'),
-        storageLine,
-        h('p', { class: 'muted small' }, `Version ${APP_VERSION === '__APP_VERSION__' ? 'dev' : APP_VERSION} · ${ctx.env} environment`),
+          importPreview,
+          ctx.repo.hasUndoImport()
+            ? h('button', { type: 'button', class: 'btn btn-text', onClick: undoImport }, 'Undo last import')
+            : null,
+          status,
+        ]),
+        sectionCard('set-about', 'Storage and app', [
+          storageLine,
+          caption(
+            `Version ${APP_VERSION === '__APP_VERSION__' ? 'dev' : APP_VERSION} · ${ctx.env} environment`,
+          ),
+          APL.Button({
+            children: 'Check for new version',
+            variant: 'secondary',
+            onClick: checkUpdate,
+            fk: 'check-update',
+          }),
+        ]),
       ),
     ),
   };
+}
+
+// ---------------------------------------------------------------- Support
+
+/**
+ * The "Support the journal" card: a link that opens the tip page in the browser and, when there is
+ * one, a QR code of that page for another phone to scan. Nothing when no link is set. The app stays
+ * free; this is only an offer.
+ */
+export function supportCard(url = SUPPORT_URL, qr = SUPPORT_QR) {
+  if (!url) return null;
+  return sectionCard('set-support', 'Support the journal', [
+    caption(
+      'The journal is free and stays free, with no ads and no account. If it helps your shooting, you can buy me a coffee to keep it going.',
+    ),
+    h(
+      'a',
+      {
+        class: ['apl', 'apl-btn', 'apl-btn--secondary', 'support-link'],
+        href: url,
+        target: '_blank',
+        rel: 'noopener noreferrer',
+        dataset: { fk: 'support' },
+      },
+      '☕ Buy me a coffee',
+    ),
+    qr
+      ? h(
+          'figure',
+          { class: 'support-qr' },
+          h('img', { src: qr, alt: 'QR code of the support page', width: 180, height: 180 }),
+          h('figcaption', { class: 'apl-cap13' }, 'Or let a friend scan this to tip from their phone.'),
+        )
+      : null,
+  ]);
 }
 
 // ---------------------------------------------------------------- Google Drive sync
@@ -212,60 +287,80 @@ function syncStatusText(st) {
 
 function syncCard(ctx) {
   const s = ctx.sync;
+  const title = 'Sync with Google Drive';
   if (!s || !s.configured) {
-    return card(
-      { 'aria-labelledby': 'set-sync' },
-      h('h2', { class: 'card-title', id: 'set-sync' }, 'Sync with Google Drive'),
-      h('p', { class: 'muted small' }, 'Not set up in this build (no Google client ID configured).'),
+    return sectionCard(
+      'set-sync',
+      title,
+      caption('Not set up in this build (no Google client ID configured).'),
     );
   }
   const signInError = ctx.ui.get().signInError;
   if (!s.signedIn()) {
-    return card(
-      { 'aria-labelledby': 'set-sync' },
-      h('h2', { class: 'card-title', id: 'set-sync' }, 'Sync with Google Drive'),
-      h(
-        'p',
-        { class: 'muted small' },
+    return sectionCard('set-sync', title, [
+      caption(
         'Keep a copy of the journal in your own Google Drive (a hidden app-only folder) and use it on more than one device. The app works offline as before; it syncs when online.',
       ),
-      signInError ? h('p', { class: 'error small', role: 'alert' }, `Google sign-in did not complete (${signInError}).`) : null,
-      h('button', { type: 'button', class: 'btn btn-primary', onClick: () => s.signIn() }, 'Continue with Google'),
-      h('p', { class: 'muted xsmall' }, 'Tip: export a backup below before the first sync.'),
-    );
+      signInError
+        ? h(
+            'p',
+            { class: 'apl-cap13 error', role: 'alert' },
+            `Google sign-in did not complete (${signInError}).`,
+          )
+        : null,
+      APL.Button({
+        children: 'Continue with Google',
+        variant: 'secondary',
+        onClick: () => s.signIn(),
+        fk: 'sign-in',
+      }),
+      h('p', { class: 'apl-cap' }, 'Tip: export a backup below before the first sync.'),
+    ]);
   }
   const st = s.status();
   const lastSync = ctx.repo.getMeta().lastSyncAt;
   const shown = st.state === 'idle' && lastSync ? { ...st, at: lastSync } : st;
-  return card(
-    { 'aria-labelledby': 'set-sync' },
-    h('h2', { class: 'card-title', id: 'set-sync' }, 'Sync with Google Drive'),
-    h('p', { class: 'small' }, 'Connected', s.email() ? [' as ', h('strong', null, s.email())] : null),
-    h('p', { class: ['small', shown.state === 'error' ? 'error' : 'muted'], role: 'status' }, syncStatusText(shown), st.message ? ` ${st.message}` : ''),
+  const signOut = async () => {
+    const ok = await confirmDialog({
+      title: 'Stop syncing?',
+      message: 'Sync stops on this device. The journal stays on this device and in Drive.',
+      confirmLabel: 'Stop syncing',
+    });
+    if (!ok) return;
+    s.signOut();
+    ctx.rerender();
+  };
+  return sectionCard('set-sync', title, [
+    h(
+      'p',
+      { class: 'apl-cap13' },
+      'Connected',
+      s.email() ? [' as ', h('strong', { class: 'apl-ink' }, s.email())] : null,
+    ),
+    h(
+      'p',
+      { class: ['apl-cap13', shown.state === 'error' && 'error'], role: 'status' },
+      syncStatusText(shown),
+      st.message ? ` ${st.message}` : '',
+    ),
     h(
       'div',
-      { class: 'row' },
+      { class: 'apl-grid-2' },
       st.state === 'error' && st.error === 'auth'
-        ? h('button', { type: 'button', class: 'btn btn-primary grow-1', onClick: () => s.signIn() }, 'Reconnect Google')
-        : h('button', { type: 'button', class: 'btn btn-primary grow-1', disabled: st.state === 'syncing', onClick: () => s.now() }, 'Sync now'),
-      h(
-        'button',
-        {
-          type: 'button',
-          class: 'btn btn-outline grow-1',
-          onClick: async () => {
-            const ok = await confirmDialog({
-              title: 'Stop syncing?',
-              message: 'Sync stops on this device. The journal stays on this device and in Drive.',
-              confirmLabel: 'Stop syncing',
-            });
-            if (!ok) return;
-            s.signOut();
-            ctx.rerender();
-          },
-        },
-        'Sign out',
-      ),
+        ? APL.Button({
+            children: 'Reconnect Google',
+            variant: 'secondary',
+            onClick: () => s.signIn(),
+            fk: 'reconnect',
+          })
+        : APL.Button({
+            children: 'Sync now',
+            variant: 'secondary',
+            disabled: st.state === 'syncing',
+            onClick: () => s.now(),
+            fk: 'sync-now',
+          }),
+      APL.Button({ children: 'Sign out', variant: 'secondary', onClick: signOut, fk: 'sign-out' }),
     ),
-  );
+  ]);
 }

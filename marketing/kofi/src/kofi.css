@@ -1,0 +1,39 @@
+/* Shared look of the Ko-fi graphics: the app's dark theme and Inter font. */
+@font-face { font-family: Inter; font-weight: 400; src: url('../../../public/fonts/inter-latin-400-normal.woff2') format('woff2'); }
+@font-face { font-family: Inter; font-weight: 600; src: url('../../../public/fonts/inter-latin-600-normal.woff2') format('woff2'); }
+@font-face { font-family: Inter; font-weight: 700; src: url('../../../public/fonts/inter-latin-700-normal.woff2') format('woff2'); }
+
+:root {
+  --ground: #0b0e10;
+  --surface: #161b1f;
+  --border-soft: #222a30;
+  --ink: #eef1f3;
+  --ink-soft: #c9d0d5;
+  --muted: #a3adb5;
+  --accent: #0b7a55;
+  --accent-bright: #4fd1a1;
+  --accent-tint: #11201b;
+  --accent-tint-border: #23453a;
+}
+
+* { box-sizing: border-box; margin: 0; }
+html, body { width: 100%; height: 100%; overflow: hidden; }
+body {
+  background: radial-gradient(120% 140% at 85% 50%, #12302a 0%, var(--ground) 55%);
+  color: var(--ink);
+  font-family: Inter, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.eyebrow { color: var(--accent-bright); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
+.muted { color: var(--muted); }
+.pill {
+  display: inline-block; padding: 0.35em 0.9em; border-radius: 999px;
+  background: var(--accent-tint); border: 1px solid var(--accent-tint-border); color: var(--ink); font-weight: 600;
+}
+
+/* SVG target marks */
+.hit circle { fill: #e5007e; stroke: #fff; stroke-width: 1.2; }
+.hit line { stroke: #fff; stroke-width: 1.6; }
+.hit rect { fill: #14181c; stroke: #fff; stroke-width: 1; }
+.hit text { fill: #fff; font: 700 12px Inter; text-anchor: middle; }

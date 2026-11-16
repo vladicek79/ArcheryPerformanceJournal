@@ -140,8 +140,9 @@ export function createRepository({
     list(name, { filter, sort } = {}) {
       assertReady();
       def(name);
-      // deletion markers ({ deleted: true }) are kept for sync but never shown
-      let items = doc.collections[name].filter((r) => !r.deleted).map((r) => structuredClone(r));
+      // deletion markers ({ deleted: true }) are kept for sync but never shown; records in the
+      // recycle bin (trashedAt) are listed only by listTrash()
+      let items = doc.collections[name].filter((r) => !r.deleted && !r.trashedAt).map((r) => structuredClone(r));
       if (filter) items = items.filter(filter);
       if (sort) items.sort(sort);
       return items;
@@ -151,7 +152,56 @@ export function createRepository({
       assertReady();
       def(name);
       const r = doc.collections[name].find((x) => x.id === id);
-      return r && !r.deleted ? structuredClone(r) : null;
+      return r && !r.deleted && !r.trashedAt ? structuredClone(r) : null;
+    },
+
+    /**
+     * Recycle bin: trash() hides a record (it keeps all its data, and the change syncs like any
+     * edit), restore() brings it back, purgeTrash() deletes for good what was trashed too long ago.
+     */
+    trash(name, id) {
+      def(name);
+      const t = iso();
+      commit(
+        (d) => {
+          d.collections[name] = d.collections[name].map((r) => (r.id === id && !r.deleted ? { ...r, trashedAt: t, updatedAt: t } : r));
+        },
+        { type: 'save', collection: name, id },
+      );
+    },
+
+    restore(name, id) {
+      def(name);
+      const t = iso();
+      commit(
+        (d) => {
+          d.collections[name] = d.collections[name].map((r) => {
+            if (r.id !== id || r.deleted) return r;
+            const { trashedAt: _t, ...rest } = r;
+            return { ...rest, updatedAt: t };
+          });
+        },
+        { type: 'save', collection: name, id },
+      );
+    },
+
+    /** Records in the recycle bin, most recently trashed first. */
+    listTrash(name) {
+      assertReady();
+      def(name);
+      return doc.collections[name]
+        .filter((r) => !r.deleted && r.trashedAt)
+        .sort((a, b) => b.trashedAt.localeCompare(a.trashedAt))
+        .map((r) => structuredClone(r));
+    },
+
+    /** Permanently delete records trashed more than `maxAgeMs` ago; returns how many. */
+    purgeTrash(name, maxAgeMs) {
+      assertReady();
+      const before = now().getTime() - maxAgeMs;
+      const old = doc.collections[name].filter((r) => !r.deleted && r.trashedAt && Date.parse(r.trashedAt) < before);
+      for (const r of old) this.remove(name, r.id);
+      return old.length;
     },
 
     /** Create (no id or unknown id) or update. Returns the saved record. */
