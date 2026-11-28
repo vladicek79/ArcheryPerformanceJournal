@@ -1,0 +1,2898 @@
+/* Archery Performance Journal — layout and screen styles. The colours, type, spacing and radii are the
+   APL design tokens (apl-tokens.css, loaded first); the names below are older aliases still used here. */
+:root {
+  --ink-2: var(--ink-soft);
+  --divider: var(--border-soft);
+  --subtle: var(--surface-sunken);
+  --focus: var(--accent-bright);
+  --shadow: none;
+  --tabbar-h: 66px;
+  --font-display: var(--font-sans);
+  --font-body: var(--font-sans);
+  /* interval timer phase colours, the same in both themes (not APL tokens) */
+  --timer-prepare: #f2b84b;
+  --timer-work-sub: #eaf6f0;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.4;
+  color: var(--ink);
+  background: var(--ground);
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+a {
+  color: var(--accent-bright);
+}
+
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+h1,
+h2,
+p {
+  margin: 0;
+}
+
+.sr-only {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------- shell */
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  max-width: 720px;
+  margin: 0 auto;
+  background: var(--ground);
+  position: relative;
+}
+
+.main {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 12px 16px 24px;
+  outline: none;
+}
+
+/* ---------------------------------------------------------------- layout helpers */
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.spread {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.plain-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.small {
+  font-size: 13px;
+}
+
+.xsmall {
+  font-size: 11px;
+}
+
+.strong {
+  font-weight: 700;
+}
+
+.center {
+  text-align: center;
+}
+
+.block {
+  display: block;
+}
+
+.error {
+  color: var(--danger);
+}
+
+.error:empty {
+  display: none;
+}
+
+/* ---------------------------------------------------------------- cards */
+.card {
+  background: var(--surface);
+  border-radius: 16px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: var(--shadow);
+  color: inherit;
+  text-decoration: none;
+}
+
+/* ---------------------------------------------------------------- buttons */
+.btn {
+  min-height: 48px;
+  padding: 0 16px;
+  border-radius: 14px;
+  border: 0;
+  font-size: 15px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-decoration: none;
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.btn-outline {
+  border: 2px solid var(--ink);
+}
+
+.btn-text {
+  background: transparent;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--muted);
+  min-height: 44px;
+}
+
+.btn-text.danger {
+  color: var(--danger);
+}
+
+.btn-sm {
+  min-height: 36px;
+  font-size: 13px;
+  padding: 0 12px;
+}
+
+/* ---------------------------------------------------------------- zones & grades */
+/* score zones: the target-* ring colours (data only). Text is target-black or target-white, whichever
+   reads at 4.5:1 or more on the ring colour (black on red: target-red is light enough). */
+.z-gold {
+  --z-bg: var(--target-gold);
+  --z-fg: var(--target-black);
+  --z-bd: var(--data-edge);
+}
+.z-red {
+  --z-bg: var(--target-red);
+  --z-fg: var(--target-black);
+  --z-bd: var(--target-red);
+}
+.z-blue {
+  --z-bg: var(--target-blue);
+  --z-fg: var(--target-black);
+  --z-bd: var(--target-blue);
+}
+.z-black {
+  --z-bg: var(--target-black);
+  --z-fg: var(--target-white);
+  --z-bd: var(--border);
+}
+.z-white {
+  --z-bg: var(--target-white);
+  --z-fg: var(--target-black);
+  --z-bd: var(--data-edge);
+}
+.z-miss {
+  --z-bg: var(--score-miss);
+  --z-fg: var(--target-black);
+  --z-bd: var(--data-edge);
+}
+.z-empty {
+  --z-bg: var(--surface);
+  --z-fg: var(--muted);
+  --z-bd: var(--border);
+}
+
+.score-chip,
+.key {
+  background: var(--z-bg);
+  color: var(--z-fg);
+  border: 2px solid var(--z-bd);
+}
+
+.score-chip {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 17px;
+  flex: none;
+}
+
+.grade-badge {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  flex: none;
+}
+
+.grade-badge.wide {
+  width: 36px;
+  height: 26px;
+  font-size: 13px;
+}
+
+/* grades: data colours (tokens grade-1…5), never UI state */
+.g1 {
+  background: var(--grade-1);
+  color: var(--on-grade-light);
+}
+.g2 {
+  background: var(--grade-2);
+  color: var(--on-grade-dark);
+}
+.g3 {
+  background: var(--grade-3);
+  color: var(--on-grade-dark);
+}
+.g4 {
+  background: var(--grade-4);
+  color: var(--on-grade-dark);
+}
+.g5 {
+  background: var(--grade-5);
+  color: var(--on-grade-light);
+}
+
+.keypad {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.key {
+  min-height: 56px;
+  border-radius: 14px;
+  font-size: 22px;
+  font-weight: 700;
+  font-family: var(--font-display);
+}
+
+.target-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.target-wrap .row {
+  width: 100%;
+}
+
+.target-btn {
+  width: min(100%, 340px);
+  aspect-ratio: 1;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  border-radius: 50%;
+  cursor: crosshair;
+  touch-action: manipulation;
+}
+
+.target-btn svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.target-btn text {
+  font-family: var(--font-body);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+textarea,
+.input {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  min-width: 0;
+}
+
+textarea {
+  padding: 10px;
+  font-size: 15px;
+  resize: vertical;
+  border-radius: 12px;
+}
+
+.input {
+  height: 44px;
+  padding: 0 10px;
+  font-size: 15px;
+  width: 100%;
+}
+
+/* ---------------------------------------------------------------- overlays */
+.overlay-root {
+  display: none;
+}
+
+.overlay-root.open {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.backdrop {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--ground) 75%, transparent);
+}
+
+.guide-table {
+  border-collapse: collapse;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.guide-table th,
+.guide-table td {
+  text-align: left;
+  vertical-align: top;
+  padding: 8px 6px;
+  border-top: 1px solid var(--subtle);
+}
+
+.guide-table thead th {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  border-top: 0;
+}
+
+.bars {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bar-row {
+  display: grid;
+  grid-template-columns: 36px 1fr 92px;
+  gap: 10px;
+  align-items: center;
+}
+
+.bar-track {
+  height: 12px;
+  background: var(--subtle);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 12px;
+  background: var(--ink);
+  border-radius: 6px;
+}
+
+.import-preview {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* ---------------------------------------------------------------- toast */
+.toast-root {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--tabbar-h) + 12px + env(safe-area-inset-bottom));
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 30;
+}
+
+.fatal {
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ---------------------------------------------------------------- larger screens */
+@media (min-width: 600px) {
+  .main {
+    padding: 16px 24px 32px;
+  }
+}
+
+/* ---------------------------------------------------------------- overflow guards (no page-level sideways scroll) */
+.app {
+  width: 100%;
+}
+
+.main,
+.stack > *,
+.card {
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* ---------------------------------------------------------------- target magnifier (loupe) */
+.target-stage {
+  position: relative;
+  width: min(100%, 340px);
+}
+
+.target-stage .target-btn {
+  width: 100%;
+}
+
+.target-btn {
+  /* an undecided finger may scroll the page up or down; once it aims, log.js cancels touchmove */
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Docked in a corner of the stage (loupePlacement.js places it from JS): the lens, and the live
+   score under it. Never under the finger, never over the aimed point. */
+.loupe {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  width: var(--loupe-size, 132px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.loupe[hidden] {
+  display: none;
+}
+
+.loupe-lens {
+  position: relative;
+  width: var(--loupe-size, 132px);
+  height: var(--loupe-size, 132px);
+  border-radius: 50%;
+  overflow: hidden;
+  box-sizing: border-box;
+  border: 3px solid var(--ink);
+  background: var(--surface-sunken);
+  box-shadow: 0 0 0 1px var(--ground);
+}
+
+.loupe-lens svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.loupe .loupe-score {
+  width: auto;
+  min-width: 44px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: var(--radius-pill);
+  font-size: 15px;
+  box-shadow: 0 0 0 2px var(--ground);
+}
+
+/* Settings > Plotting arrows > Zoom: no loupe; the live score floats beside the aimed point (log.js
+   places it) */
+.zoom-score {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: auto;
+  min-width: 44px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: var(--radius-pill);
+  font-size: 15px;
+  box-shadow: 0 0 0 2px var(--ground);
+  pointer-events: none;
+  z-index: 5;
+}
+
+.zoom-score[hidden] {
+  display: none;
+}
+
+/* ---------------------------------------------------------------- inline M/S grades */
+.grade-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 4px;
+  border-top: 1px solid var(--subtle);
+}
+
+/* fit the whole end (slots, target, quick keys, grades) on one phone screen */
+.target-stage {
+  width: min(100%, 340px, max(240px, calc(100dvh - 400px)));
+}
+
+.grade-panel {
+  gap: 4px;
+}
+
+.target-wrap {
+  gap: 8px;
+}
+
+.target-stage {
+  width: min(100%, 340px, max(230px, calc(100dvh - 530px)));
+}
+
+.end-of {
+  font-size: 13px;
+  font-weight: 500;
+  font-family: var(--font-body);
+}
+
+/* ---------------------------------------------------------------- all cards edge to edge */
+.main .card {
+  margin-left: -16px;
+  margin-right: -16px;
+  max-width: none;
+  border-radius: 0;
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+@media (min-width: 600px) {
+  .main .card {
+    margin-left: -24px;
+    margin-right: -24px;
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+}
+
+/* ---------------------------------------------------------------- selected arrow (the one the M/S rows grade) */
+
+/* ---------------------------------------------------------------- session group on the detail page */
+.group-face {
+  width: min(100%, 360px);
+  margin: 0 auto;
+}
+
+
+/* ---------------------------------------------------------------- test environment marker */
+.env-badge {
+  position: fixed;
+  top: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 40;
+  padding: 2px 10px;
+  border-radius: 10px;
+  background: #b45309;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  pointer-events: none;
+}
+
+/* the test build: an orange line over the tab bar too */
+.env-test .apl-tabbar {
+  border-top: 3px solid #b45309;
+}
+
+/* three-spot sheets (triple, Vegas): not round, and never taller than the screen */
+.target-btn.target-sheet {
+  border-radius: 8px;
+}
+
+
+/* three-spot sheets: the sheet, with all arrows on one spot under it */
+.group-faces {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+
+
+
+
+/* The app frame is pinned to the window, so the bottom tabs always sit on the bottom edge.
+   100dvh can be taller than the visible area in an installed (standalone) Android app, which
+   pushed the tab bar below the screen; a fixed frame always matches the window. */
+html,
+body {
+  overflow: hidden;
+}
+
+.app {
+  position: fixed;
+  inset: 0;
+  height: auto;
+}
+
+/* SPT drill card (sessionForms.js drillCard): header, presets, −/+ tiles, timeline, Start timer */
+.drill-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.drill-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+.drill-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-right: -6px;
+}
+.drill-well {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  background: var(--accent-icon-bg);
+  color: var(--accent-bright);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.drill-well--done {
+  background: var(--surface-sunken);
+  color: var(--muted);
+}
+.drill-title {
+  flex: 1;
+}
+.drill-name {
+  font: 700 16px/22px var(--font-sans);
+}
+.drill-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.drill-preset {
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  background: var(--surface-sunken);
+  color: var(--ink);
+  font: 600 14px/1 var(--font-sans);
+  cursor: pointer;
+}
+.drill-preset[aria-pressed='true'] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+}
+.drill-tiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+.drill-card .apl-btn {
+  height: 52px;
+  border-radius: var(--radius-lg);
+  font-size: 16px;
+}
+.drill-mark {
+  align-self: center;
+  min-height: var(--tap-min);
+}
+/* a done drill: one read-only line, with only its remove button */
+.drill-done {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 64px;
+  padding: 0 8px 0 var(--space-4);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink);
+}
+.drill-done-text {
+  flex: 1;
+}
+.drill-done .apl-iconbtn {
+  color: var(--muted);
+}
+/* "Add a drill": compact dashed chips that wrap */
+.drill-add {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.drill-add-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.drill-add-chip {
+  min-height: var(--tap-min);
+  padding: 0 14px;
+  border-radius: var(--radius-pill);
+  border: 1px dashed var(--border-dashed);
+  background: transparent;
+  color: var(--accent-bright);
+  font: 600 14px/1 var(--font-sans);
+  cursor: pointer;
+}
+
+/* −/+ tile (common.js stepperTile): label on top, big value between 44px buttons, on sunken */
+.stepper-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: 8px 6px 6px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-soft);
+  background: var(--surface-sunken);
+}
+.stepper-label {
+  font: var(--type-label);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--muted);
+}
+.stepper-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2px;
+}
+.stepper-btn {
+  flex-shrink: 0;
+  width: var(--tap-min);
+  height: var(--tap-min);
+  border-radius: var(--radius-pill);
+  border: none;
+  background: var(--surface);
+  color: var(--ink);
+  font: 400 22px/1 var(--font-sans);
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+.stepper-btn[aria-disabled='true'] {
+  color: var(--radio-off);
+  cursor: default;
+}
+.stepper-value {
+  flex: 1;
+  min-width: 0;
+  height: var(--tap-min);
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--ink);
+  padding: 0;
+  cursor: text;
+}
+.stepper-out {
+  font: 700 24px/1 var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.stepper-unit {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.stepper-input {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  height: var(--tap-min);
+  text-align: center;
+  font: 700 20px/1 var(--font-sans);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------------------------------------------------------- Insights */
+/* wide layout on a desktop browser */
+.app.app-wide {
+  max-width: 1280px;
+}
+
+/* Insights: the range, type and distance filters, one section under the other */
+.filters {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+@media (min-width: 900px) {
+  .chart-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .chart-grid > :first-child {
+    grid-column: span 2;
+  }
+}
+
+.chart-grid {
+  display: grid;
+  gap: var(--space-3);
+}
+
+/* charts run edge to edge like every card; on a desktop two sit side by side and together span the full width */
+@media (min-width: 900px) {
+  .main .chart-grid {
+    margin-left: -24px;
+    margin-right: -24px;
+    max-width: none;
+  }
+  .main .chart-grid .card {
+    margin-left: 0;
+    margin-right: 0;
+  }
+}
+
+.viz {
+  position: relative;
+}
+
+.viz-box {
+  width: 100%;
+}
+
+.viz-box svg {
+  display: block;
+  touch-action: pan-y;
+}
+
+.viz-grid {
+  stroke: var(--divider);
+  stroke-width: 1;
+}
+
+.viz-axis {
+  font-size: 12px;
+  fill: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.viz-dot {
+  stroke: var(--surface);
+  stroke-width: 2;
+}
+
+.viz-seg {
+  stroke: var(--surface);
+  stroke-width: 2;
+}
+
+.viz-cross {
+  stroke: var(--muted);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+
+.viz-tip {
+  position: absolute;
+  z-index: 2;
+  pointer-events: none;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--ink);
+  color: var(--surface);
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.viz-tip-title {
+  font-weight: 700;
+}
+
+.viz-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.viz-key,
+.type-dot-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.viz-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex: none;
+}
+
+.sort-btn {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  padding: 0;
+  cursor: pointer;
+}
+
+.row-link {
+  cursor: pointer;
+}
+
+.row-link:hover td,
+.row-link:focus td {
+  background: var(--subtle);
+}
+
+.journal-row {
+  display: grid;
+  gap: 10px;
+}
+
+.journal-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: inherit;
+  text-decoration: none;
+}
+
+@media (min-width: 900px) {
+  .journal-row {
+    grid-template-columns: 180px repeat(3, minmax(0, 1fr));
+    align-items: start;
+  }
+}
+
+/* blank bale logged afterwards or in History: the arrow count, typed in one big field */
+.arrow-count-input.input {
+  width: 100%;
+  height: 96px;
+  font-family: var(--font-display);
+  font-size: 56px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+/* ---------------------------------------------------------------- date and time pickers */
+.picker {
+  position: relative;
+  min-width: 0;
+}
+
+.picker-panel {
+  position: absolute;
+  z-index: 15;
+  top: calc(100% + 6px);
+  left: 0;
+  width: min(312px, calc(100vw - 32px));
+  padding: var(--space-3);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transform-origin: top left;
+}
+
+.picker-panel[hidden] {
+  display: none;
+}
+
+.picker-panel.is-in {
+  animation: cal-in 160ms ease-out;
+}
+
+@keyframes cal-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.97);
+  }
+}
+
+.cal-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cal-title {
+  flex: 1;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.cal-nav {
+  width: var(--tap-min);
+  height: var(--tap-min);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  border: 0;
+  background: var(--subtle);
+  color: var(--ink);
+}
+
+.cal-nav:disabled {
+  opacity: 0.35;
+}
+
+.cal-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cal-grid.slide-next {
+  animation: cal-slide-next 180ms ease-out;
+}
+
+.cal-grid.slide-prev {
+  animation: cal-slide-prev 180ms ease-out;
+}
+
+@keyframes cal-slide-next {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+}
+
+@keyframes cal-slide-prev {
+  from {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+}
+
+.cal-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.cal-weekday {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 2px 0 4px;
+}
+
+/* weekends a shade lighter than the weekdays (accent is kept for the selected day) */
+.cal-weekday.is-weekend {
+  color: var(--ink-soft);
+}
+
+.cal-day {
+  position: relative;
+  aspect-ratio: 1;
+  min-height: var(--tap-min);
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 100ms, transform 80ms;
+}
+
+.cal-day:hover:not(:disabled) {
+  background: var(--subtle);
+}
+
+.cal-day:active:not(:disabled) {
+  transform: scale(0.9);
+}
+
+.cal-day.is-outside {
+  color: var(--muted);
+  font-weight: 500;
+  opacity: 0.6;
+}
+
+.cal-day:disabled {
+  opacity: 0.25;
+  cursor: default;
+}
+
+.cal-day.is-today {
+  box-shadow: inset 0 0 0 2px var(--accent);
+  color: var(--accent);
+}
+
+.cal-day.is-selected {
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 45%, transparent);
+  opacity: 1;
+}
+
+.cal-day.is-selected:hover {
+  background: var(--accent);
+}
+
+.cal-dot {
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  margin-left: -2.5px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.cal-day.is-selected .cal-dot {
+  background: var(--on-accent);
+}
+
+.picker-foot {
+  display: flex;
+  gap: 8px;
+  padding-top: 4px;
+  border-top: 1px solid var(--divider);
+}
+
+.picker-quick {
+  flex: 1;
+  height: var(--tap-min);
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.picker-quick.is-on {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.picker-quick.is-primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.picker-quick:disabled {
+  opacity: 0.35;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .picker-panel.is-in,
+  .cal-grid.slide-next,
+  .cal-grid.slide-prev {
+    animation: none;
+  }
+}
+
+/* time picker: a bottom sheet (a modal <dialog>, in the top layer above the tab bar and other sheets) */
+.tp-sheet {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: min(720px, 100%);
+  max-height: calc(100dvh - 12px);
+  margin: auto auto 0;
+  padding: 10px var(--space-5) calc(var(--space-6) + env(safe-area-inset-bottom));
+  border: 0;
+  border-top: 1px solid var(--border);
+  border-radius: 24px 24px 0 0;
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  overflow-y: auto;
+  touch-action: manipulation;
+  animation: tp-sheet-in 200ms ease-out;
+}
+
+.tp-sheet[open] {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.tp-sheet::backdrop {
+  background: color-mix(in srgb, var(--ground) 66%, transparent);
+  animation: apl-fade 200ms ease-out;
+}
+
+@keyframes tp-sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+.tp-grab {
+  align-self: center;
+  width: 40px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border-dashed);
+}
+
+.tp-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.tp-title {
+  margin: 0;
+  font: var(--type-screen-title);
+}
+
+.tp-date {
+  font: var(--type-caption);
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.tp-quick,
+.tp-rounds {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.tp-chip,
+.tp-round {
+  min-width: 0;
+  height: var(--tap-min);
+  border: 1px solid var(--border);
+  background: var(--surface-sunken);
+  color: var(--ink);
+  font: var(--type-body-strong);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.tp-chip {
+  border-radius: 22px;
+}
+
+.tp-round {
+  border-radius: var(--radius-md);
+}
+
+.tp-chip[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.tp-chip:disabled {
+  opacity: 0.4;
+}
+
+.tp-dial {
+  display: grid;
+  grid-template-columns: 1fr 24px 1fr;
+  align-items: center;
+  justify-items: center;
+  row-gap: 2px;
+  padding: 4px 8px;
+  border-radius: 20px;
+  border: 1px solid var(--border-soft);
+  background: var(--surface-sunken);
+}
+
+.tp-step {
+  width: 100%;
+  height: 52px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--ink-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* held to repeat: no scrolling, selecting or callout under the finger */
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.tp-step:active {
+  background: color-mix(in srgb, var(--ink) 8%, transparent);
+}
+
+/* the chevron icon points right */
+.tp-step.is-up svg {
+  transform: rotate(-90deg);
+}
+
+.tp-step.is-down svg {
+  transform: rotate(90deg);
+}
+
+.tp-num {
+  padding: 0 6px;
+  border-radius: var(--radius-md);
+  font: 800 72px/1 var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  cursor: text;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.tp-num:focus-visible,
+.tp-type:focus-visible {
+  outline: 2px solid var(--accent-bright);
+  outline-offset: 2px;
+}
+
+.tp-colon {
+  font: 800 56px/1 var(--font-sans);
+  color: var(--radio-off);
+}
+
+/* typing: one field in place of HH : MM */
+.tp-type {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  box-sizing: border-box;
+  width: 100%;
+  height: 72px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--ink);
+  text-align: center;
+  font: 800 60px/1 var(--font-sans);
+  font-variant-numeric: tabular-nums;
+}
+
+.tp-unit {
+  font: var(--type-caption);
+  color: var(--muted);
+}
+
+.tp-hint {
+  margin: 0;
+  min-height: 19px;
+  font-size: 13px;
+  line-height: 19px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.tp-hint.is-warn {
+  color: var(--review-work);
+}
+
+.tp-clear {
+  align-self: center;
+  min-height: var(--tap-min);
+  padding: 0 var(--space-4);
+  border: 0;
+  background: transparent;
+  color: var(--accent-bright);
+  font: var(--type-body-strong);
+}
+
+.tp-foot {
+  display: grid;
+  grid-template-columns: 1fr 1.6fr;
+  gap: var(--space-3);
+}
+
+.tp-btn {
+  height: var(--tap-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  color: var(--ink);
+  font: var(--type-button-lg);
+  font-variant-numeric: tabular-nums;
+}
+
+.tp-btn.is-primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.tp-btn.is-primary:disabled {
+  border-color: var(--border);
+  background: var(--surface-sunken);
+  color: var(--muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tp-sheet,
+  .tp-sheet::backdrop {
+    animation: none;
+  }
+}
+
+/* ---------------------------------------------------------------- running sessions (above the bottom bar) */
+/* running sessions (and, on the Dashboard, New session) in an APL bottom bar above the tab bar */
+.running-bars {
+  flex: none;
+  padding-bottom: 12px;
+}
+
+.running-bars:empty {
+  display: none;
+}
+
+
+/* multi-spot sheets: a zoomed spot gets an "All spots" button to go back to the whole sheet */
+.zoom-out-btn {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 34px;
+  padding: 0 12px 0 6px;
+  border: 0;
+  border-radius: 17px;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.25);
+}
+
+.zoom-out-btn[hidden] {
+  display: none;
+}
+
+.zoom-out-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Clear (the picked arrow): last key of the quick row, red outline; invisible but keeps its place
+   when no arrow is picked, so the score keys never shift */
+/* a placed arrow being dragged to a new place: its old dot fades while the loupe shows the new one */
+.target-btn [data-arrow].is-grabbed {
+  opacity: 0;
+}
+
+/* …and the move is unmistakable: a pink loupe that says which arrow is moving */
+.loupe.is-moving .loupe-lens {
+  border-color: var(--mark);
+  box-shadow:
+    0 0 0 3px rgba(229, 0, 126, 0.35),
+    0 6px 18px rgba(20, 24, 28, 0.35);
+}
+
+.loupe-tag {
+  position: absolute;
+  left: 50%;
+  top: 12px;
+  transform: translateX(-50%);
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--mark);
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.loupe-tag[hidden] {
+  display: none;
+}
+
+/* scoring from a photo: the camera button next to the timer, and the preview in the dialog */
+.photo-preview {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 50vh;
+  object-fit: contain;
+  border-radius: 12px;
+  background: #000000;
+}
+
+/* the score labels on it can be dragged: a finger on the picture must not scroll or select */
+.photo-preview.is-adjustable {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* the picture takes nearly the whole screen: what is left is the two buttons under it */
+.apl-dialog--bare .photo-preview {
+  height: calc(100vh - 110px);
+  height: calc(100dvh - 110px);
+  max-height: none;
+}
+
+/* live camera scan: full-screen view with the detection drawn over the video */
+.live-scan {
+  width: 100vw;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 12px 16px calc(16px + env(safe-area-inset-bottom));
+  border: 0;
+  background: var(--ground);
+  color: var(--ink);
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.live-scan[open] {
+  display: flex;
+}
+
+.live-top {
+  display: flex;
+  justify-content: flex-end;
+  flex: none;
+}
+
+.live-stage {
+  position: relative;
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: 100%;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  aspect-ratio: 3 / 4;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #000000;
+}
+
+.live-video,
+.live-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* the Scan reading a photo: between the camera and the found arrows */
+.scan-working {
+  width: 100vw;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  border: 0;
+  background: var(--ground);
+  color: var(--ink);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+}
+
+.scan-working[open] {
+  display: flex;
+}
+
+.scan-working-text {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.scan-working-spinner {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 4px solid var(--border);
+  border-top-color: var(--accent);
+  animation: scan-working-turn 0.9s linear infinite;
+}
+
+@keyframes scan-working-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scan-working-spinner {
+    animation: apl-pulse 1.6s ease-in-out infinite;
+  }
+}
+
+/* Watch code scan: a square guide in the middle of the picture */
+.watch-guide {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(62%, 62vh);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  border: 3px solid rgba(255, 255, 255, 0.9);
+  border-radius: 18px;
+  box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+}
+
+.live-status {
+  flex: none;
+  min-height: 1.4em;
+  text-align: center;
+  font: var(--type-body-strong);
+}
+
+.live-actions {
+  flex: none;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.3fr);
+  gap: var(--space-2);
+  margin-top: auto;
+}
+/* three buttons on a 360px phone: less side padding, and the icons keep their size */
+.live-actions > button {
+  padding-inline: var(--space-2);
+}
+.live-actions svg {
+  flex: none;
+}
+
+/* Interval timer (tabataTimer.js): full screen, the whole screen takes the colour of the phase so it
+   reads from the corner of the eye at full draw. Each phase sets the colours below; get ready and
+   hold are the same in both themes, rest and done follow the theme. */
+.tabata {
+  --tb-bg: var(--surface-bar);
+  --tb-fg: var(--ink);
+  --tb-sub: var(--muted);
+  --tb-chip: color-mix(in srgb, var(--ink) 8%, transparent);
+  --tb-ring: var(--accent-bright);
+  --tb-track: var(--border-soft);
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 12px 12px calc(32px + env(safe-area-inset-bottom));
+  border: 0;
+  background: var(--tb-bg);
+  color: var(--tb-fg);
+  flex-direction: column;
+  align-items: center;
+  overflow-y: auto;
+  transition: background-color 300ms ease;
+}
+.tabata[open] {
+  display: flex;
+}
+/* get ready: amber, dark text (#4a3a12 on amber 6.3:1) */
+.tabata[data-phase='prepare'] {
+  --tb-bg: var(--timer-prepare);
+  --tb-fg: #14181b;
+  --tb-sub: #4a3a12;
+  --tb-chip: rgba(20, 24, 27, 0.12);
+  --tb-ring: #14181b;
+  --tb-track: rgba(20, 24, 27, 0.15);
+}
+/* hold: accent green, white text (5.3:1), sub-lines #eaf6f0 (4.8:1) */
+.tabata[data-phase='work'] {
+  --tb-bg: var(--accent);
+  --tb-fg: var(--on-accent);
+  --tb-sub: var(--timer-work-sub);
+  --tb-chip: rgba(255, 255, 255, 0.16);
+  --tb-ring: var(--on-accent);
+  --tb-track: rgba(255, 255, 255, 0.2);
+}
+
+.tabata-top {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+.tabata-icon {
+  width: var(--tap-min);
+  height: var(--tap-min);
+  flex-shrink: 0;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--tb-chip);
+  color: var(--tb-fg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.tabata-heading {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.tabata-title {
+  font: 700 26px/32px var(--font-sans);
+}
+.tabata-sub {
+  font: 400 20px/26px var(--font-sans);
+  color: var(--tb-sub);
+  font-variant-numeric: tabular-nums;
+}
+.tabata-progress {
+  flex: none;
+  width: 100%;
+  max-width: 358px;
+  height: 5px;
+  margin-top: 12px;
+  border-radius: 3px;
+  background: var(--tb-chip);
+  overflow: hidden;
+}
+.tabata-progress-fill {
+  height: 100%;
+  width: 0;
+  background: var(--tb-fg);
+  opacity: 0.8;
+}
+.tabata-phase {
+  margin: 34px 0 0;
+  font: 800 30px/36px var(--font-sans);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-align: center;
+}
+.tabata-rep {
+  margin: 4px 0 0;
+  font: 400 22px/28px var(--font-sans);
+  color: var(--tb-sub);
+  text-align: center;
+}
+.tabata-ring {
+  position: relative;
+  flex: none;
+  width: 290px;
+  height: 290px;
+  margin-top: 22px;
+}
+.tabata-ring svg {
+  position: absolute;
+  inset: 0;
+  transform: rotate(-90deg);
+}
+.tabata-ring circle {
+  fill: none;
+  stroke-width: 14;
+}
+.tabata-ring-track {
+  stroke: var(--tb-track);
+}
+.tabata-ring-fill {
+  stroke: var(--tb-ring);
+  stroke-linecap: round;
+  transition: stroke-dashoffset 100ms linear;
+}
+.tabata-ring-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.tabata-sec {
+  font: 800 132px/1 var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.04em;
+}
+.tabata-of {
+  margin-top: 4px;
+  font: 600 15px/20px var(--font-sans);
+  color: var(--tb-sub);
+}
+.tabata-paused {
+  display: none;
+  position: absolute;
+  left: 50%;
+  top: 22px;
+  transform: translateX(-50%);
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 14px;
+  background: var(--tb-fg);
+  color: var(--tb-bg);
+  font: 700 13px/28px var(--font-sans);
+  letter-spacing: 0.06em;
+}
+.tabata.is-paused .tabata-paused {
+  display: block;
+}
+.tabata-pills {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  max-width: 358px;
+  margin-top: 28px;
+}
+.tabata-pill {
+  width: 32px;
+  height: 22px;
+  border-radius: 11px;
+  border-width: 3px;
+  border: 2px solid var(--tb-track);
+  box-sizing: border-box;
+}
+.tabata-pill.is-done {
+  background: var(--tb-fg);
+  border-color: var(--tb-fg);
+}
+.tabata-pill.is-current {
+  width: 56px;
+  border-color: var(--tb-fg);
+}
+.tabata-next {
+  margin: 22px 0 0;
+  font: 400 26px/32px var(--font-sans);
+  text-align: center;
+  color: var(--tb-sub);
+}
+.tabata-next strong {
+  color: var(--tb-fg);
+  font-weight: 700;
+}
+.tabata-controls {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  margin-top: auto;
+  padding-top: 24px;
+}
+.tabata-round {
+  border: none;
+  border-radius: var(--radius-pill);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.tabata-round--side {
+  width: 60px;
+  height: 60px;
+  background: var(--tb-chip);
+  color: var(--tb-fg);
+}
+.tabata-round--side:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+/* Pause / Resume: inverted colours of the phase */
+.tabata-round--main {
+  width: 88px;
+  height: 88px;
+  background: var(--tb-fg);
+  color: var(--tb-bg);
+}
+.tabata-round-text {
+  font: 700 17px/1 var(--font-sans);
+}
+.tabata button:focus-visible {
+  outline: 3px solid var(--tb-fg);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tabata,
+  .tabata-ring-fill {
+    transition: none;
+  }
+}
+
+/* Settings: the support link looks like a secondary button */
+.support-link {
+  text-decoration: none;
+}
+
+/* PayPal: the amounts side by side, as wide as the card */
+.support-paypal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.support-amounts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(64px, 1fr));
+  gap: var(--space-2);
+}
+
+/* ---------------------------------------------------------------- scoring screen (running session) */
+/* The end on one phone screen: header, slot strip, face, keypad or grades; Previous, Next and Scan
+   in the bottom bar. Let-downs, the note, the ends and Finish follow by scrolling. */
+.score-screen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.score-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 28px;
+}
+
+/* Finish: outlined, next to the timer; opens the End the session sheet */
+/* Finish: filled in the accent, as Next is once the end is full */
+.score-finish {
+  flex: none;
+  height: var(--tap-min);
+  padding: 0 14px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  color: var(--on-accent);
+  font: var(--type-body-strong);
+}
+
+/* the Finish sheet and the Discard confirmation */
+.score-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.score-sheet-summary {
+  margin: 0 0 4px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.score-danger-btn,
+.score-text-btn {
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: var(--radius-xl);
+  font: var(--type-body-strong);
+}
+
+.score-danger-btn {
+  border: 1px solid color-mix(in srgb, var(--danger) 45%, var(--surface));
+  background: color-mix(in srgb, var(--danger) 8%, var(--surface));
+  color: var(--danger);
+}
+
+.score-text-btn {
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+}
+
+.score-discard-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.score-discard-well {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--danger) 8%, var(--surface));
+  color: var(--danger);
+}
+
+.score-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.score-fact {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 0;
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+}
+
+.score-fact strong {
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+}
+
+.score-fact span {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.score-discard-desc {
+  margin: 0;
+  font-size: 15px;
+  line-height: 22px;
+  color: var(--ink-soft);
+}
+
+.score-discard-desc strong {
+  color: var(--ink);
+}
+
+/* Total (below the end, reached by scrolling): the running total, then the ends, the one being
+   shot first with an accent edge */
+.score-total {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg, 16px);
+  background: var(--surface);
+}
+
+.score-total-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.score-total-head h2 {
+  margin: 0;
+  font: var(--type-label);
+  letter-spacing: var(--type-label-tracking);
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.score-total-figures {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.score-total-avg {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.score-total-head strong {
+  font-size: 26px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.total-ends {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.total-end {
+  width: 100%;
+  min-height: var(--tap-min);
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 0;
+  border-left: 3px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+}
+
+.total-end.is-current {
+  border-left-color: var(--accent-bright);
+}
+
+.total-end.is-viewed {
+  box-shadow: inset 0 0 0 1px var(--accent-bright);
+}
+
+.total-end-no {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.total-end-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.total-end-arrows {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.total-end-arrows .score-chip {
+  min-width: 26px;
+  width: auto;
+  height: 22px;
+  padding: 0 4px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.total-end-arrows .score-chip.z-empty {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--muted);
+}
+
+.total-end-meta {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.total-end-score {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-variant-numeric: tabular-nums;
+}
+
+.total-end-score strong {
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.total-end-score span {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* slot strip: one card per arrow, the current one outlined in accent */
+.slot-strip {
+  display: grid;
+  grid-template-columns: repeat(var(--slot-cols, 3), minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+/* a tile: the slot itself (chip + "M1 S2", selects the arrow) and, on the selected scored arrow,
+   the × that clears it (a 32px dot in a 44px hit area) */
+.slot-card {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  min-height: 48px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.slot-card.is-active {
+  border-color: var(--accent-bright);
+  box-shadow: inset 0 0 0 1px var(--accent-bright);
+}
+
+.slot-pick {
+  flex: 1;
+  min-width: 0;
+  align-self: stretch;
+  min-height: var(--tap-min);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 0 0 8px;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+.slot-clear {
+  flex: none;
+  width: var(--tap-min);
+  height: var(--tap-min);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--danger);
+}
+
+.slot-clear-dot {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--danger) 8%, var(--surface));
+}
+
+.slot-clear-dot svg {
+  width: 14px;
+  height: 14px;
+  stroke-width: 3;
+}
+
+.slot-card .score-chip {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  font-size: 15px;
+}
+
+.slot-card .score-chip.z-empty {
+  background: var(--surface-sunken);
+  border-color: var(--radio-off);
+  color: var(--muted);
+}
+
+.slot-card-grades {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+/* more than six arrows: smaller tiles, the chip over the grades */
+.slot-strip.is-compact .slot-pick {
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  min-height: 56px;
+  padding: 4px 0;
+}
+
+.slot-strip.is-compact .slot-card-grades {
+  font-size: 11px;
+}
+
+/* without grading: just the score, six cards to a row; the × of the selected arrow sits on its
+   corner (a 28px hit area) */
+.slot-strip.is-narrow {
+  gap: 6px;
+}
+
+.slot-strip.is-narrow .slot-card {
+  position: relative;
+}
+
+.slot-strip.is-narrow .slot-pick {
+  justify-content: center;
+  padding: 0;
+}
+
+.slot-strip.is-narrow .slot-clear {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  width: 28px;
+  height: 28px;
+}
+
+.slot-strip.is-narrow .slot-clear-dot {
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--border);
+}
+
+.slot-strip.is-narrow .slot-clear-dot svg {
+  width: 11px;
+  height: 11px;
+}
+
+/* Scoring v2: the end fills the scrolling main area down to the bottom bar, without scrolling.
+   The main area is a size container, so the end can be exactly as tall as it; the face takes
+   whatever height the rows around it leave (edge to edge), and Total follows by scrolling. */
+.main:has(> .apl-screen .score-screen) {
+  container-type: size;
+}
+
+.apl-screen:has(.score-screen) > .apl-bar {
+  --score-bar-pad: 8px;
+  padding: var(--score-bar-pad) var(--space-5);
+}
+
+.log-body:has(.score-screen) {
+  padding-top: 0;
+}
+
+.score-screen {
+  /* the main area's height less the top bar (runningHeader.js) and the bottom bar (56px button +
+     its padding + its top border) */
+  height: calc(100cqh - var(--run-head-h) - var(--tap-primary) - 2 * 8px - 1px);
+  min-height: 510px;
+  gap: 6px;
+}
+
+/* the face: the stage (the loupe docks inside it), with a row floating over a multi-spot sheet */
+.score-face {
+  position: relative;
+  flex: 1 1 0;
+  min-height: 180px;
+  margin-inline: calc(-1 * var(--space-5));
+  align-items: stretch;
+  gap: var(--space-1);
+  container-type: size;
+}
+
+.score-face .face-bar {
+  padding-inline: var(--space-5);
+}
+
+/* the square stage: as large as the face's box allows */
+.score-face .target-stage {
+  align-self: center;
+  width: min(100cqw, 100cqh, 560px);
+}
+
+/* a block, so the stage is exactly as tall as it (no space under an inline button) */
+.score-face .target-stage > .target-btn {
+  display: block;
+}
+
+/* over a zoomed spot only ("All spots", back to the whole sheet, at the right): it floats over the
+   top of the face, so it takes no room between the arrows and the face */
+.face-bar {
+  position: absolute;
+  inset: 4px 0 auto;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  pointer-events: none;
+}
+
+.face-bar > * {
+  pointer-events: auto;
+}
+
+.face-bar .zoom-out-btn {
+  position: static;
+}
+
+/* the spot suggested for the selected arrow (a hint: any spot can be tapped) */
+.spot-hint {
+  fill: none;
+  stroke: var(--accent-bright);
+  stroke-width: 3px;
+  vector-effect: non-scaling-stroke;
+}
+
+.target-btn.is-zoomed .spot-hint {
+  display: none;
+}
+
+/* multi-spot sheets: a numbered badge at each spot (where it comes in the order), the suggested
+   spot's lit */
+.spot-order-mark circle {
+  fill: color-mix(in srgb, var(--surface) 90%, transparent);
+  stroke: var(--ink-soft);
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+}
+
+.spot-order-mark text {
+  fill: var(--ink);
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.spot-order-mark.is-next circle {
+  fill: var(--accent-bright);
+  stroke: var(--accent-bright);
+}
+
+.spot-order-mark.is-next text {
+  fill: #fff;
+}
+
+/* the spot order editor: a small sheet with a draggable number on each spot, and the order beside it */
+.spot-order {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 4px;
+}
+
+.so-stage {
+  flex: none;
+}
+
+.so-column .so-sheet {
+  width: 84px;
+  height: 252px;
+}
+
+.so-triangle .so-sheet {
+  width: 150px;
+  height: 140px;
+}
+
+.so-sheet {
+  display: block;
+  overflow: visible;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.so-face {
+  opacity: 0.55;
+}
+
+.so-badge {
+  cursor: grab;
+  outline: none;
+}
+
+.so-badge.is-dragged {
+  cursor: grabbing;
+}
+
+.so-ring {
+  fill: transparent;
+  stroke: transparent;
+  stroke-width: 3px;
+  vector-effect: non-scaling-stroke;
+}
+
+.so-badge.is-dragged .so-ring {
+  display: none;
+}
+
+.so-badge.is-target .so-ring,
+.so-badge.is-selected .so-ring,
+.so-badge:focus-visible .so-ring {
+  stroke: var(--accent-bright);
+}
+
+.so-disc {
+  fill: var(--surface);
+  stroke: var(--ink);
+  stroke-width: 2px;
+  vector-effect: non-scaling-stroke;
+}
+
+.so-badge.is-selected .so-disc,
+.so-badge.is-dragged .so-disc {
+  fill: var(--accent-bright);
+  stroke: var(--accent-bright);
+}
+
+.so-badge text {
+  fill: var(--ink);
+  font-size: 58px;
+  font-weight: 800;
+  pointer-events: none;
+}
+
+.so-badge.is-selected text,
+.so-badge.is-dragged text {
+  fill: #fff;
+}
+
+.so-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+}
+
+.so-now {
+  margin: 0;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.so-side .apl-cap {
+  margin: 0;
+}
+
+.so-default {
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.so-default.is-on {
+  padding: 0;
+  border-color: transparent;
+  color: var(--muted);
+}
+
+/* under the face, always both: the score keypad (X … M) and the M / S grades */
+.score-under {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.score-under .apl-keypad {
+  gap: 6px;
+}
+
+.score-under .apl-keypad .apl-key,
+.score-under .grade-panel .apl-key {
+  min-height: var(--tap-min);
+  height: var(--tap-min);
+}
+
+.score-under .grade-panel {
+  border-top: 0;
+  padding-top: 0;
+  gap: 6px;
+}
+
+.score-under .apl-grades {
+  grid-template-columns: 20px repeat(var(--apl-cols, 5), minmax(0, 1fr));
+  gap: 6px;
+}
+
+/* Let-downs a · b and Note (both open End n details), and the hint on the right */
+.score-chips {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: var(--tap-min);
+}
+
+.score-chip-btn {
+  flex: none;
+  height: var(--tap-min);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.score-chip-btn strong {
+  font-weight: 800;
+}
+
+.score-chip-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.score-chip-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-bright);
+}
+
+/* let-down counters fill their column: − at the left edge, the count centred, + at the right edge */
+.end-details .apl-stepper {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+}
+
+.end-details .apl-stepper output {
+  flex: 1;
+}
+
+/* the chosen grade: a 3px ring (the others dim) */
+.score-under .grade-panel .apl-key[aria-pressed='true'] {
+  box-shadow: 0 0 0 3px var(--ink);
+}
+
+/* bottom bar: Previous (end), Next (end; accent once the end is complete), Watch and Scan, all
+   four the same size, Scan at the right under the thumb */
+.score-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.score-prev,
+.score-next,
+.score-watch,
+.score-scan {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.score-prev,
+.score-next,
+.score-watch {
+  height: var(--tap-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--ink);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font: var(--type-body-strong);
+  white-space: nowrap;
+}
+
+.score-prev,
+.score-next,
+.score-watch {
+  padding: 0 6px;
+}
+
+.score-watch {
+  gap: 6px;
+}
+
+.score-watch svg {
+  width: 20px;
+  height: 20px;
+  flex: none;
+}
+
+.score-next.is-ready:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.score-scan {
+  height: var(--tap-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 6px;
+  border: 2px solid var(--accent-bright);
+  border-radius: var(--radius-lg);
+  background: var(--accent-tint);
+  color: var(--ink);
+  font: var(--type-body-strong);
+  white-space: nowrap;
+}
+
+.score-scan svg {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  color: var(--accent-bright);
+}
+
+.score-prev:disabled,
+.score-next:disabled,
+.score-scan:disabled {
+  opacity: 0.45;
+}
+
+/* A running session's top bar (title or end, timer, Finish) stays at the top of the scrolling main
+   area on every session type, so Finish is always in reach. */
+.session-head {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--ground);
+}
+
+/* A competition round's plan on the Shooting page (set by the round, not editable): one line per
+   distance and face, or per kind of target of a course. */
+.round-plan {
+  margin: 0;
+  padding: 12px 14px;
+  list-style: none;
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.round-plan li {
+  overflow-wrap: anywhere;
+}
+/* the scoring screen's course targets and the overview's distance headings over a round's ends */
+.target-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ov-end-pass {
+  margin: 12px 0 4px;
+  font-weight: 600;
+}
+
+/* A running session's own page has no tab bar (main.js .no-tabs): the session's bottom bar sits at
+   the screen's edge, clear of the phone's gesture area, and the toast drops to it. */
+.app.no-tabs {
+  --tabbar-h: 0px;
+}
+.app.no-tabs > .apl-tabbar {
+  display: none;
+}
+.app.no-tabs .apl-screen > .apl-bar {
+  padding-bottom: calc(12px + env(safe-area-inset-bottom));
+}
+
+/* The running blank bale's Watch (scan an end's code from the watch): a full-width button under the
+   +1 / +3 / +6 buttons, in the style of the scoring screen's Watch. */
+.bb-watch {
+  height: var(--tap-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--ink);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font: var(--type-body-strong);
+  touch-action: manipulation;
+}
+.bb-watch svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* The Sight move box's "Sight moved: start again" (scoring screen) */
+.ov-sight-reset {
+  margin-top: 8px;
+}
